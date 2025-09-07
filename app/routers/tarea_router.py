@@ -17,7 +17,6 @@ def crear_tarea(
     repo = TareaRepository(db)
     service = TareaService(repo)
     tarea_creada = service.crear_tarea(tarea.dict())
-    print(f"[DEBUG] Request ID: {request.state.request_id} | Crear tarea")
     return TareaOut.model_validate(tarea_creada)
 
 @router.get("/", response_model=list[TareaOut])
@@ -28,7 +27,6 @@ def listar_tareas(
     repo = TareaRepository(db)
     service = TareaService(repo)
     tareas = service.obtener_todas()
-    print(f"[DEBUG] Request ID: {request.state.request_id} | Listar tareas")
     return [TareaOut.model_validate(t) for t in tareas]
 
 @router.get("/completadas/{status}", response_model=list[TareaOut])
@@ -40,7 +38,6 @@ def tareas_por_estado(
     repo = TareaRepository(db)
     service = TareaService(repo)
     tareas = service.obtener_por_estado(status)
-    print(f"[DEBUG] Request ID: {request.state.request_id} | Tareas completadas: {status}")
     return [TareaOut.model_validate(t) for t in tareas]
 
 @router.get("/{id}", response_model=TareaOut)
@@ -54,7 +51,6 @@ def tarea_por_id(
     tarea = service.obtener_por_id(id)
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
-    print(f"[DEBUG] Request ID: {request.state.request_id} | Obtener tarea ID: {id}")
     return TareaOut.model_validate(tarea)
 
 @router.get("/alumno/{alumno_id}", response_model=list[TareaOut])
@@ -66,7 +62,6 @@ def tareas_por_alumno(
     repo = TareaRepository(db)
     service = TareaService(repo)
     tareas = service.obtener_por_alumno(alumno_id)
-    print(f"[DEBUG] Request ID: {request.state.request_id} | Tareas alumno ID: {alumno_id}")
     return [TareaOut.model_validate(t) for t in tareas]
 
 @router.delete("/{id}")
@@ -81,5 +76,4 @@ def eliminar_tarea(
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
     service.eliminar_tarea(tarea)
-    print(f"[DEBUG] Request ID: {request.state.request_id} | Eliminar tarea ID: {id}")
     return {"mensaje": f"Tarea {id} eliminada correctamente"}

@@ -1,17 +1,32 @@
 # app/main.py
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.database import Base, engine
 from app.routers import alumno_router, tarea_router
 from app.middlewares.request_context import request_context_middleware
-from app.middlewares.auth import auth_middleware
+from app.middlewares.auth import auth_middleware  # si quieres auth global
+from app.exceptions import (
+    http_exception_handler,
+    validation_exception_handler,
+    generic_exception_handler
+)
 
+# Crear tablas
 Base.metadata.create_all(bind=engine)
 
+# Instancia FastAPI
 app = FastAPI(title="API Escolar Modularizada", version="1.0")
 
 # Registrar middlewares
 app.middleware("http")(request_context_middleware)
-# app.middleware("http")(auth_middleware)  # activar solo si quieres auth global
+# app.middleware("http")(auth_middleware)  # activar si quieres auth global
+
+# Registrar manejadores de excepciones
+app.add_exception_handler(Exception, generic_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Routers
 app.include_router(alumno_router.router)

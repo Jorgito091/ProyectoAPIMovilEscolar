@@ -19,7 +19,6 @@ def crear_alumno(
     try:
         alumno_creado = service.crear_alumno(alumno.dict())
         # Log del middleware
-        print(f"[DEBUG] Request ID: {request.state.request_id} | Crear alumno")
         return AlumnoOut.model_validate(alumno_creado)  # Pydantic v2
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -32,5 +31,4 @@ def listar_alumnos(
     repo = AlumnoRepository(db)
     service = AlumnoService(repo)
     alumnos = service.obtener_alumnos()
-    print(f"[DEBUG] Request ID: {request.state.request_id} | Listar alumnos")
     return [AlumnoOut.model_validate(a) for a in alumnos]
