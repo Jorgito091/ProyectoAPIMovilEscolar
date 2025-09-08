@@ -15,7 +15,7 @@ def crear_alumno(
     request: Request = None  
 ):
     repo = AlumnoRepository(db)
-    service = AlumnoService(repo)
+    service = Alumnoservice(repo)
     try:
         alumno_creado = service.crear_alumno(alumno.dict())
         # Log del middleware

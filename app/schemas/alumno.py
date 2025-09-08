@@ -13,4 +13,4 @@ class AlumnoCreate(AlumnoBase):
 class AlumnoOut(AlumnoBase):
     id: int
     class Config:
-        from_attributes = True  # Pydantic v2 compatible
+        from_attributes = True  
