@@ -1,17 +1,19 @@
 from fastapi import FastAPI
+from fastapi.security import OAuth2PasswordBearer
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.database import Base, engine
-from app.routers import alumno_router, tarea_router, auth_alumno_router
+from app.routers import auth, tarea_router, user_router
 from app.middlewares.request_context import request_context_middleware
 from app.middlewares.auth import auth_middleware  
+
 from app.exceptions import (
     http_exception_handler,
     validation_exception_handler,
     generic_exception_handler
 )
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
 # Crear tablas
 Base.metadata.create_all(bind=engine)
 
@@ -28,6 +30,6 @@ app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Routers
-app.include_router(alumno_router.router)
+app.include_router(user_router.router)
 app.include_router(tarea_router.router)
-app.include_router(auth_alumno_router.router) 
+app.include_router(auth.router)
