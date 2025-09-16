@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends,HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.schemas.user import UserCreate, UserLogin, UserOut
 from app.repositories.user_repo import UserRepository
@@ -33,5 +33,9 @@ def login(
         "id": user.id,
         "rol": user.rol
     })
-    return {"access_token": token, "token_type": "bearer"} 
-
+    # Aquí se incluye el rol explícitamente en la respuesta:
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "rol": user.rol
+    }

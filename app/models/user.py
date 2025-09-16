@@ -13,18 +13,15 @@ class User(Base):
     grupo_id = Column(Integer, ForeignKey("grupos.id"), nullable=True)
 
     # Relación del usuario con su grupo (un alumno pertenece a un grupo)
-    # Le decimos a SQLAlchemy que use la columna `grupo_id` para esta relación
     grupo_asignado = relationship(
         "Grupo", 
         back_populates="alumnos", 
         foreign_keys=[grupo_id]
     )
 
-    # Relación con las tareas (un usuario tiene muchas tareas)
-    tareas = relationship("Tarea", back_populates="alumno", cascade="all, delete-orphan")
+    # <<< Elimina esta línea: >>>
+    # tareas = relationship("Tarea", back_populates="alumno", cascade="all, delete-orphan")
 
-    # Relación con los grupos que este usuario es maestro (un maestro es responsable de muchos grupos)
-    # Le decimos a SQLAlchemy que use la columna `maestro_id` de la tabla de Grupos para esta relación
     grupos_maestro = relationship(
         "Grupo", 
         back_populates="maestro", 

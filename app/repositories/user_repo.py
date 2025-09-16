@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session,joinedload
+from sqlalchemy.orm import Session, joinedload
 from app.models.user import User
 
 class UserRepository:
@@ -13,27 +13,23 @@ class UserRepository:
 
     def obtener_por_matricula(self, matricula: str):
         return self.db.query(User).options(
-            joinedload(User.grupo_asignado),
-            joinedload(User.tareas)
+            joinedload(User.grupo_asignado)
         ).filter(User.matricula == matricula).first()
 
     def obtener_todos_por_rol(self, rol: str):
         return self.db.query(User).options(
             joinedload(User.grupo_asignado),
-            joinedload(User.grupos_maestro),
-            joinedload(User.tareas)
+            joinedload(User.grupos_maestro)
         ).filter(User.activo == True, User.rol == rol).all()
     
     def obtener_alumnos_por_grupo(self, grupo_id: int):
         return self.db.query(User).options(
-            joinedload(User.grupo_asignado),
-            joinedload(User.tareas)
+            joinedload(User.grupo_asignado)
         ).filter(User.activo == True, User.rol == "alumno", User.grupo_id == grupo_id).all()
 
     def obtener_por_id(self, id: int):
         return self.db.query(User).options(
-            joinedload(User.grupo_asignado),
-            joinedload(User.tareas)
+            joinedload(User.grupo_asignado)
         ).get(id)
     
     def actualizar(self, user: User):

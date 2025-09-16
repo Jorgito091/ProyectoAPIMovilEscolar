@@ -1,4 +1,3 @@
-# app/repositories/tarea_repo.py
 from sqlalchemy.orm import Session
 from app.models.tarea import Tarea
 
@@ -18,8 +17,8 @@ class TareaRepository:
     def obtener_por_id(self, id: int):
         return self.db.query(Tarea).get(id)
 
-    def obtener_por_alumno(self, alumno_id: int):
-        return self.db.query(Tarea).filter(Tarea.alumno_id == alumno_id).all()
+    def obtener_por_grupo(self, grupo_id: int):
+        return self.db.query(Tarea).filter(Tarea.grupo_id == grupo_id).all()
 
     def obtener_por_estado(self, status: bool):
         return self.db.query(Tarea).filter(Tarea.completada == status).all()

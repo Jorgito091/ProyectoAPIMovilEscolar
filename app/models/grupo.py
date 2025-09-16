@@ -20,3 +20,9 @@ class Grupo(Base):
         foreign_keys="User.grupo_id", 
         cascade="all, delete-orphan"
     )
+
+    tareas = relationship(
+        "Tarea", 
+        back_populates="grupo", 
+        cascade="all, delete-orphan"
+    )
