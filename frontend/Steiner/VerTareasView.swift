@@ -2,7 +2,7 @@ import SwiftUI
 
 struct VerTareasView: View {
     let accessToken: String
-    let alumnoID: Int  // <-- Agrega aquí el ID del alumno logueado
+    let alumnoID: Int
 
     @State private var grupoID: String = ""
     @State private var tareas: [Tarea] = []

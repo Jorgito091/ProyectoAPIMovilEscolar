@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AlView: View {
     let accessToken: String
+    let alumnoID: Int
 
     enum Seccion {
         case verTareas, verGrupos
@@ -40,7 +41,7 @@ struct AlView: View {
 
             switch seccion {
             case .verTareas:
-                VerTareasView(accessToken: accessToken)
+                VerTareasView(accessToken: accessToken, alumnoID: alumnoID)
             case .verGrupos:
                 GruposView(accessToken: accessToken)
             default:

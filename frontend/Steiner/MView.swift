@@ -69,7 +69,7 @@ struct MView: View {
             case .crear:
                 CrearTareaView(accessToken: accessToken)
             case .ver:
-                VerTareasView(accessToken: accessToken)
+                VerTareasView(accessToken: accessToken, alumnoID: -1)
             case .editar:
                 EditarTareaView(accessToken: accessToken)
             case .eliminar:

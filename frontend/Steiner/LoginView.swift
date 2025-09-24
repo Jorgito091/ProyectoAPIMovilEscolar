@@ -4,6 +4,7 @@ struct LoginResponse: Decodable {
     let access_token: String
     let token_type: String
     let rol: String
+    let alumno_id: Int?    
 }
 
 struct LoginView: View {
@@ -81,7 +82,8 @@ struct LoginView: View {
     var destinationView: some View {
         if let response = loginResponse {
             if response.rol == "alumno" {
-                AlView(accessToken: response.access_token)
+                // Pasa también el alumnoID
+                AlView(accessToken: response.access_token, alumnoID: response.alumno_id ?? -1)
             } else if response.rol == "maestro" {
                 MView(accessToken: response.access_token)
             } else {
