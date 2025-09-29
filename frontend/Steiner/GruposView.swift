@@ -8,33 +8,46 @@ struct Grupo: Decodable, Identifiable {
 struct GruposView: View {
     let accessToken: String
 
+    // Colores cálidos y oscuros estilo escolar
+    let cafe = Color(red: 71/255, green: 53/255, blue: 37/255)
+    let beige = Color(red: 230/255, green: 220/255, blue: 200/255)
+    let cafeOscuro = Color(red: 51/255, green: 37/255, blue: 24/255)
+
     @State private var grupos: [Grupo] = []
     @State private var mensaje: String = ""
     @State private var isLoading = false
 
     var body: some View {
-        VStack {
+        VStack(spacing: 16) {
             Button(action: cargarGrupos) {
                 if isLoading {
                     ProgressView()
+                        .tint(beige)
                 } else {
-                    Text("Cargar grupos").frame(maxWidth: .infinity)
+                    Text("Cargar grupos")
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(beige)
                 }
             }
-            .padding()
-            .background(Color.purple.opacity(0.8))
-            .foregroundColor(.white)
-            .cornerRadius(8)
+            .padding(.vertical, 10)
+            .background(cafe)
+            .cornerRadius(10)
             .padding(.horizontal)
+            .shadow(color: cafeOscuro.opacity(0.08), radius: 4, y: 1)
+
             if !mensaje.isEmpty {
                 Text(mensaje)
-                    .foregroundColor(.purple)
+                    .foregroundColor(.red)
                     .padding()
             }
+
             List(grupos) { grupo in
-                GrupoItemView(grupo: grupo)
+                GrupoItemView(grupo: grupo, cafe: cafe, cafeOscuro: cafeOscuro)
+                    .listRowBackground(beige.opacity(0.7))
             }
         }
+        .padding(.vertical)
     }
 
     func cargarGrupos() {
@@ -76,13 +89,18 @@ struct GruposView: View {
 
 struct GrupoItemView: View {
     let grupo: Grupo
+    let cafe: Color
+    let cafeOscuro: Color
+
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(grupo.nombre)
                 .font(.headline)
+                .foregroundColor(cafeOscuro)
             Text("ID: \(grupo.id)")
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(cafe)
         }
+        .padding(.vertical, 4)
     }
 }

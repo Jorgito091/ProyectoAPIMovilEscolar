@@ -4,6 +4,11 @@ struct VerTareasView: View {
     let accessToken: String
     let alumnoID: Int
 
+    // Colores cálidos y oscuros estilo escolar
+    let cafe = Color(red: 71/255, green: 53/255, blue: 37/255)
+    let beige = Color(red: 230/255, green: 220/255, blue: 200/255)
+    let cafeOscuro = Color(red: 51/255, green: 37/255, blue: 24/255)
+
     @State private var grupoID: String = ""
     @State private var tareas: [Tarea] = []
     @State private var mensaje: String = ""
@@ -17,27 +22,41 @@ struct VerTareasView: View {
     @State private var uploadMessage: String = ""
 
     var body: some View {
-        VStack {
-            TextField("ID del Grupo", text: $grupoID)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding(.horizontal)
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "number")
+                    .foregroundColor(cafeOscuro)
+                TextField("ID del Grupo", text: $grupoID)
+                    .padding(10)
+                    .background(beige.opacity(0.8))
+                    .cornerRadius(10)
+                    .foregroundColor(cafeOscuro)
+            }
+            .padding(.horizontal)
+
             Button(action: cargarTareas) {
                 if isLoading {
                     ProgressView()
+                        .tint(beige)
                 } else {
-                    Text("Ver tareas del grupo").frame(maxWidth: .infinity)
+                    Text("Ver tareas del grupo")
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(beige)
                 }
             }
-            .padding()
-            .background(Color.green.opacity(0.8))
-            .foregroundColor(.white)
-            .cornerRadius(8)
+            .padding(.vertical, 10)
+            .background(cafe)
+            .cornerRadius(10)
             .padding(.horizontal)
+            .shadow(color: cafeOscuro.opacity(0.08), radius: 4, y: 1)
+
             if !mensaje.isEmpty {
                 Text(mensaje)
                     .foregroundColor(.red)
                     .padding()
             }
+
             List(tareas) { tarea in
                 VStack(alignment: .leading) {
                     TareaItemView(tarea: tarea, onTap: { selectedTarea = tarea })
@@ -46,9 +65,10 @@ struct VerTareasView: View {
                         showDocumentPicker = true
                     }
                     .font(.caption)
-                    .foregroundColor(.blue)
+                    .foregroundColor(cafe)
                     .padding(.top, 2)
                 }
+                .listRowBackground(beige.opacity(0.7))
             }
             .sheet(item: $selectedTarea) { tarea in
                 TareaDetalleView(tarea: tarea)
@@ -61,12 +81,14 @@ struct VerTareasView: View {
                     }
                 }
             }
+
             if !uploadMessage.isEmpty {
                 Text(uploadMessage)
-                    .foregroundColor(.blue)
+                    .foregroundColor(cafe)
                     .padding()
             }
         }
+        .padding(.vertical)
     }
 
     func cargarTareas() {
@@ -111,12 +133,10 @@ struct VerTareasView: View {
 
     func subirEntrega(tarea: Tarea, alumnoID: Int, fileURL: URL) {
         uploadMessage = ""
-        // 1. Lee el archivo
         guard let fileData = try? Data(contentsOf: fileURL) else {
             uploadMessage = "No se pudo leer el archivo."
             return
         }
-        // 2. Prepara request para backend (ajusta la URL a tu endpoint real)
         guard let url = URL(string: "http://localhost:8000/entregas/archivo/") else {
             uploadMessage = "URL incorrecta para la entrega."
             return
@@ -127,27 +147,21 @@ struct VerTareasView: View {
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-        // 3. Construye el body multipart con tarea_id, alumno_id y archivo
         var body = Data()
-        // tarea_id
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"tarea_id\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(tarea.id)\r\n".data(using: .utf8)!)
-        // alumno_id
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"alumno_id\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(alumnoID)\r\n".data(using: .utf8)!)
-        // archivo
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"archivo\"; filename=\"\(fileURL.lastPathComponent)\"\r\n".data(using: .utf8)!)
         body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
         body.append(fileData)
         body.append("\r\n".data(using: .utf8)!)
-        // end
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         request.httpBody = body
 
-        // 4. Envía request
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
@@ -161,7 +175,6 @@ struct VerTareasView: View {
                 if httpResponse.statusCode == 201 {
                     uploadMessage = "¡Entrega subida exitosamente!"
                 } else {
-                    // Intenta mostrar el error de la respuesta, si hay
                     if let data = data, let serverMsg = String(data: data, encoding: .utf8) {
                         uploadMessage = "Error (\(httpResponse.statusCode)): \(serverMsg)"
                     } else {
