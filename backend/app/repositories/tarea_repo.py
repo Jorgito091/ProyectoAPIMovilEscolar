@@ -25,6 +25,9 @@ class TareaRepository:
 
     def obtener_por_grupo(self, grupo_id: int):
         return self.db.query(Tarea).filter(Tarea.grupo_id == grupo_id).all()
+    
+    def obtener_por_clase(self, clase_id: int):
+        return self.db.query(Tarea).filter(Tarea.clase_id == clase_id).all()
 
     def eliminar(self, tarea):
         self.db.delete(tarea)

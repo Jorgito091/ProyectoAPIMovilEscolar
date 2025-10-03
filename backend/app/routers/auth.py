@@ -1,41 +1,38 @@
-from fastapi import APIRouter, Depends,HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.schemas.user import UserCreate, UserLogin, UserOut
-from app.repositories.user_repo import UserRepository
+from app.schemas.user import UsuarioCreate, UsuarioOut, UsuarioLogin
+from app.schemas.token import Token
 from app.services.user_service import UserService
-from app.dependencies import get_user_service
+from app.dependencies import get_usuario_service
 from app.utils.jwt import crear_access_token
 
-router = APIRouter(prefix="/user", tags=["User Auth"])
+router = APIRouter(prefix="/auth", tags=["Authentificación"])
 
-@router.post("/register", response_model=UserOut)
+@router.post("/register", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
 def register(
-    user: UserCreate,
-    user_service: UserService = Depends(get_user_service),
+    user_data: UsuarioCreate,
+    user_service: UserService = Depends(get_usuario_service)
 ):
-    user_creado = user_service.crear_usuario(user)
-    return user_creado
+    return user_service.crear_usuario(user_data)
 
-@router.post("/login")
+@router.post("/login", response_model=Token)
 def login(
-    data: UserLogin ,
-    user_service: UserService = Depends(get_user_service)
+    credentials: UsuarioLogin,
+    user_service: UserService = Depends(get_usuario_service)
 ):
-    user = user_service.autentificar_usuario(data.matricula, data.password)
-
+    user = user_service.autentificar_usuario(credentials.matricula, credentials.password)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales inválidas"
-        )
-    token = crear_access_token({
-        "sub": user.matricula,
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+    token_data = {
+        "sub": str(user.matricula),
         "id": user.id,
-        "rol": user.rol
-    })
-    # AGREGA "rol" a la respuesta:
+        "rol": user.rol,
+        "nombre": user.nombre
+    }
+    access_token = crear_access_token(token_data)
     return {
-        "access_token": token,
+        "access_token": access_token,
         "token_type": "bearer",
-        "rol": user.rol
+        "rol": user.rol,
+        "alumno_id": user.id if user.rol == "alumno" else None
     }

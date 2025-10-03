@@ -6,11 +6,9 @@ struct CrearTareaView: View {
 
     @State private var titulo: String = ""
     @State private var descripcion: String = ""
-    @State private var grupoID: String = ""
-    @State private var fechaInicio: Date = Date()
-    @State private var fechaEntrega: Date = Date()
-    @State private var usarFechaInicio = false
-    @State private var usarFechaEntrega = false
+    @State private var claseID: String = ""
+    @State private var fechaLimite: Date = Date()
+    @State private var usarFechaLimite = false
     @State private var isLoading = false
     @State private var mensaje = ""
     @State private var success: Bool? = nil
@@ -23,19 +21,13 @@ struct CrearTareaView: View {
             TextField("Descripción", text: $descripcion)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-            TextField("ID del Grupo", text: $grupoID)
+            TextField("ID de la Clase", text: $claseID)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-            Toggle("Fecha de inicio", isOn: $usarFechaInicio)
+            Toggle("Fecha límite", isOn: $usarFechaLimite)
                 .padding(.horizontal)
-            if usarFechaInicio {
-                DatePicker("Fecha de inicio", selection: $fechaInicio, displayedComponents: .date)
-                    .padding(.horizontal)
-            }
-            Toggle("Fecha de entrega", isOn: $usarFechaEntrega)
-                .padding(.horizontal)
-            if usarFechaEntrega {
-                DatePicker("Fecha de entrega", selection: $fechaEntrega, displayedComponents: .date)
+            if usarFechaLimite {
+                DatePicker("Fecha límite", selection: $fechaLimite, displayedComponents: .date)
                     .padding(.horizontal)
             }
             Button(action: crearTarea) {
@@ -64,7 +56,7 @@ struct CrearTareaView: View {
     }
 
     func crearTarea() {
-        guard let grupoIdInt = Int(grupoID), !titulo.isEmpty else {
+        guard let claseIdInt = Int(claseID), !titulo.isEmpty else {
             mensaje = "Completa todos los campos obligatorios"
             success = false
             return
@@ -76,12 +68,11 @@ struct CrearTareaView: View {
         var tareaData: [String: Any] = [
             "titulo": titulo,
             "descripcion": descripcion,
-            "grupo_id": grupoIdInt
+            "clase_id": claseIdInt
         ]
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        if usarFechaInicio { tareaData["fecha_inicio"] = formatter.string(from: fechaInicio) }
-        if usarFechaEntrega { tareaData["fecha_entrega"] = formatter.string(from: fechaEntrega) }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        if usarFechaLimite { tareaData["fecha_limite"] = formatter.string(from: fechaLimite) }
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: tareaData) else {
             mensaje = "Error al preparar datos"
@@ -121,9 +112,8 @@ struct CrearTareaView: View {
                     mensaje = ""
                     titulo = ""
                     descripcion = ""
-                    grupoID = ""
-                    usarFechaInicio = false
-                    usarFechaEntrega = false
+                    claseID = ""
+                    usarFechaLimite = false
                     onTareaCreada?()
                 } else {
                     mensaje = "Error al crear la tarea (\(httpResponse.statusCode))"

@@ -1,42 +1,38 @@
-from sqlalchemy.orm import Session,joinedload
+from sqlalchemy.orm import Session, selectinload
 from app.models.user import User
+from app.models.inscripciones import Inscripcion
 
 class UserRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def crear(self, user: User):
-        self.db.add(user)
+    def crear(self, usuario: User) -> User:
+        self.db.add(usuario)
         self.db.commit()
-        self.db.refresh(user)
-        return user
+        self.db.refresh(usuario)
+        return usuario
 
-    def obtener_por_matricula(self, matricula: str):
-        return self.db.query(User).options(
-            joinedload(User.grupo_asignado),
-            joinedload(User.tareas)
-        ).filter(User.matricula == matricula).first()
+    def obtener_por_matricula(self, matricula: str) -> User | None:
+        return self.db.query(User).filter(User.matricula == matricula).first()
 
-    def obtener_todos_por_rol(self, rol: str):
-        return self.db.query(User).options(
-            joinedload(User.grupo_asignado),
-            joinedload(User.grupos_maestro),
-            joinedload(User.tareas)
-        ).filter(User.activo == True, User.rol == rol).all()
+    def obtener_por_id(self, usuario_id: int) -> User | None:
+        print(f"DEBUG REPO - Buscando usuario con ID: {usuario_id}, tipo: {type(usuario_id)}")
     
-    def obtener_alumnos_por_grupo(self, grupo_id: int):
-        return self.db.query(User).options(
-            joinedload(User.grupo_asignado),
-            joinedload(User.tareas)
-        ).filter(User.activo == True, User.rol == "alumno", User.grupo_id == grupo_id).all()
+        usuario = self.db.query(User).options(
+            selectinload(User.inscripciones).selectinload(Inscripcion.clase),
+            selectinload(User.clases_impartidas)
+        ).filter(User.id == usuario_id).first()
+        
+        print(f"DEBUG REPO - Usuario encontrado: {usuario}")
+        if usuario:
+            print(f"DEBUG REPO - Usuario ID: {usuario.id}, Matricula: {usuario.matricula}, Rol: {usuario.rol}")
+        
+        return usuario
 
-    def obtener_por_id(self, id: int):
-        return self.db.query(User).options(
-            joinedload(User.grupo_asignado),
-            joinedload(User.tareas)
-        ).get(id)
+    def obtener_todos_por_rol(self, rol: str) -> list[User]:
+        return self.db.query(User).filter(User.rol == rol).all()
     
-    def actualizar(self, user: User):
+    def actualizar(self, usuario: User) -> User:
         self.db.commit()
-        self.db.refresh(user)
-        return user
+        self.db.refresh(usuario)
+        return usuario

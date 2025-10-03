@@ -20,6 +20,7 @@ struct VerTareasView: View {
     @State private var tareaParaEntrega: Tarea? = nil
     @State private var selectedFileURL: URL? = nil
     @State private var uploadMessage: String = ""
+    @State private var isUploading: Bool = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -58,17 +59,18 @@ struct VerTareasView: View {
             }
 
             List(tareas) { tarea in
-                VStack(alignment: .leading) {
-                    TareaItemView(tarea: tarea, onTap: { selectedTarea = tarea })
-                    Button("Subir entrega") {
+                TareaItemView(
+                    tarea: tarea,
+                    onTap: { selectedTarea = tarea },
+                    onUpload: {
                         tareaParaEntrega = tarea
                         showDocumentPicker = true
-                    }
-                    .font(.caption)
-                    .foregroundColor(cafe)
-                    .padding(.top, 2)
-                }
-                .listRowBackground(beige.opacity(0.7))
+                    },
+                    isUploading: isUploading && tareaParaEntrega?.id == tarea.id
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .padding(.vertical, 2)
             }
             .sheet(item: $selectedTarea) { tarea in
                 TareaDetalleView(tarea: tarea)
@@ -76,9 +78,25 @@ struct VerTareasView: View {
             // Picker de archivos
             .sheet(isPresented: $showDocumentPicker) {
                 DocumentPicker(fileURL: $selectedFileURL) { url in
+                    // Cerrar el picker inmediatamente
+                    showDocumentPicker = false
+                    
+                    // Procesar el archivo si fue seleccionado
                     if let tarea = tareaParaEntrega, let fileURL = url {
-                        subirEntrega(tarea: tarea, alumnoID: alumnoID, fileURL: fileURL)
+                        uploadMessage = "Preparando archivo..."
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            subirEntrega(tarea: tarea, alumnoID: alumnoID, fileURL: fileURL)
+                        }
+                    } else if url == nil {
+                        uploadMessage = "Selección cancelada"
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            uploadMessage = ""
+                        }
                     }
+                    
+                    // Resetear variables
+                    selectedFileURL = nil
+                    // tareaParaEntrega se mantiene hasta que termine la subida
                 }
             }
 
@@ -92,21 +110,21 @@ struct VerTareasView: View {
     }
 
     func cargarTareas() {
-        guard let grupoIdInt = Int(grupoID) else {
-            mensaje = "ID de grupo inválido"
+        guard let claseIdInt = Int(grupoID) else {
+            mensaje = "ID de clase inválido"
             return
         }
         isLoading = true
         mensaje = ""
         tareas = []
-        guard let url = URL(string: "http://localhost:8000/tareas/grupo/\(grupoIdInt)") else {
+        guard let url = URL(string: "http://localhost:8000/tareas/clase/\(claseIdInt)") else {
             mensaje = "URL incorrecta"
             isLoading = false
             return
         }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        // El endpoint /tareas/clase/{clase_id} no requiere autenticación
         URLSession.shared.dataTask(with: request) { data, _, error in
             DispatchQueue.main.async {
                 isLoading = false
@@ -122,7 +140,7 @@ struct VerTareasView: View {
                     let tareasDecodificadas = try JSONDecoder().decode([Tarea].self, from: data)
                     tareas = tareasDecodificadas
                     if tareas.isEmpty {
-                        mensaje = "No hay tareas para este grupo"
+                        mensaje = "No hay tareas para esta clase"
                     }
                 } catch {
                     mensaje = "Error al decodificar las tareas"
@@ -132,48 +150,101 @@ struct VerTareasView: View {
     }
 
     func subirEntrega(tarea: Tarea, alumnoID: Int, fileURL: URL) {
-        uploadMessage = ""
+        isUploading = true
+        uploadMessage = "Subiendo archivo..."
+        
+        // Verificar que el archivo existe y se puede leer
+        guard fileURL.startAccessingSecurityScopedResource() else {
+            isUploading = false
+            uploadMessage = "No se pudo acceder al archivo."
+            return
+        }
+        defer { fileURL.stopAccessingSecurityScopedResource() }
+        
         guard let fileData = try? Data(contentsOf: fileURL) else {
+            isUploading = false
             uploadMessage = "No se pudo leer el archivo."
             return
         }
-        guard let url = URL(string: "http://localhost:8000/entregas/archivo/") else {
+        
+        // Determinar MIME type basado en extensión
+        let fileName = fileURL.lastPathComponent
+        let fileExtension = fileURL.pathExtension.lowercased()
+        let mimeType: String
+        switch fileExtension {
+        case "pdf":
+            mimeType = "application/pdf"
+        case "jpg", "jpeg":
+            mimeType = "image/jpeg"
+        case "png":
+            mimeType = "image/png"
+        case "gif":
+            mimeType = "image/gif"
+        case "txt":
+            mimeType = "text/plain"
+        case "rtf":
+            mimeType = "application/rtf"
+        case "doc":
+            mimeType = "application/msword"
+        case "docx":
+            mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        case "xlsx":
+            mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        case "pptx":
+            mimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        default:
+            mimeType = "application/octet-stream"
+        }
+        
+        // Crear multipart/form-data
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+        
+        let boundaryPrefix = "--\(boundary)\r\n"
+        
+        // Agregar el archivo
+        body.append(boundaryPrefix.data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+        
+        // Cerrar boundary
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        guard let url = URL(string: "http://localhost:8000/entregas/tarea/\(tarea.id)") else {
+            isUploading = false
             uploadMessage = "URL incorrecta para la entrega."
             return
         }
+        
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        let boundary = "Boundary-\(UUID().uuidString)"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-
-        var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"tarea_id\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(tarea.id)\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"alumno_id\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(alumnoID)\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"archivo\"; filename=\"\(fileURL.lastPathComponent)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
-        body.append(fileData)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         request.httpBody = body
-
+        request.timeoutInterval = 60 // 60 segundos timeout
+        
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
+                isUploading = false
                 if let error = error {
                     uploadMessage = "Error al subir: \(error.localizedDescription)"
+                    tareaParaEntrega = nil
                     return
                 }
                 guard let httpResponse = response as? HTTPURLResponse else {
                     uploadMessage = "Sin respuesta del servidor"
+                    tareaParaEntrega = nil
                     return
                 }
+                
                 if httpResponse.statusCode == 201 {
                     uploadMessage = "¡Entrega subida exitosamente!"
+                    // Limpiar después de 3 segundos
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        uploadMessage = ""
+                    }
                 } else {
                     if let data = data, let serverMsg = String(data: data, encoding: .utf8) {
                         uploadMessage = "Error (\(httpResponse.statusCode)): \(serverMsg)"
@@ -181,6 +252,9 @@ struct VerTareasView: View {
                         uploadMessage = "Error: Código \(httpResponse.statusCode)"
                     }
                 }
+                
+                // Resetear variables de estado
+                tareaParaEntrega = nil
             }
         }.resume()
     }

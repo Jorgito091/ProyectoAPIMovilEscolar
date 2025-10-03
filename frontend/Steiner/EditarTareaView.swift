@@ -7,10 +7,8 @@ struct EditarTareaView: View {
     @State private var tareaID: String = ""
     @State private var nuevoTitulo: String = ""
     @State private var nuevaDescripcion: String = ""
-    @State private var nuevaFechaInicio: Date = Date()
-    @State private var nuevaFechaEntrega: Date = Date()
-    @State private var editarFechaInicio = false
-    @State private var editarFechaEntrega = false
+    @State private var nuevaFechaLimite: Date = Date()
+    @State private var editarFechaLimite = false
     @State private var mensaje = ""
     @State private var isLoading = false
 
@@ -25,16 +23,10 @@ struct EditarTareaView: View {
             TextField("Nueva descripción", text: $nuevaDescripcion)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-            Toggle("Editar fecha de inicio", isOn: $editarFechaInicio)
+            Toggle("Editar fecha límite", isOn: $editarFechaLimite)
                 .padding(.horizontal)
-            if editarFechaInicio {
-                DatePicker("Nueva fecha de inicio", selection: $nuevaFechaInicio, displayedComponents: .date)
-                    .padding(.horizontal)
-            }
-            Toggle("Editar fecha de entrega", isOn: $editarFechaEntrega)
-                .padding(.horizontal)
-            if editarFechaEntrega {
-                DatePicker("Nueva fecha de entrega", selection: $nuevaFechaEntrega, displayedComponents: .date)
+            if editarFechaLimite {
+                DatePicker("Nueva fecha límite", selection: $nuevaFechaLimite, displayedComponents: .date)
                     .padding(.horizontal)
             }
             Button(action: editarTarea) {
@@ -69,9 +61,9 @@ struct EditarTareaView: View {
         var updateData: [String: Any] = [:]
         if !nuevoTitulo.isEmpty { updateData["titulo"] = nuevoTitulo }
         if !nuevaDescripcion.isEmpty { updateData["descripcion"] = nuevaDescripcion }
-        let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"
-        if editarFechaInicio { updateData["fecha_inicio"] = formatter.string(from: nuevaFechaInicio) }
-        if editarFechaEntrega { updateData["fecha_entrega"] = formatter.string(from: nuevaFechaEntrega) }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        if editarFechaLimite { updateData["fecha_limite"] = formatter.string(from: nuevaFechaLimite) }
         guard !updateData.isEmpty else {
             mensaje = "No hay ningún campo para actualizar"
             isLoading = false
@@ -109,8 +101,7 @@ struct EditarTareaView: View {
                     tareaID = ""
                     nuevoTitulo = ""
                     nuevaDescripcion = ""
-                    editarFechaInicio = false
-                    editarFechaEntrega = false
+                    editarFechaLimite = false
                     onTareaEditada?()
                 } else {
                     mensaje = "Error al actualizar (\(httpResponse.statusCode))"

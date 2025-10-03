@@ -1,37 +1,202 @@
-# Node.js dependencies
-node_modules/
+# ================================
+# PYTHON BACKEND
+# ================================
 
-# Build output
-dist/
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
 # Environment variables
 .env
+.env.local
+.env.development
+.env.test
+.env.production
 
-# IDE and OS files
+# Database
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# ================================
+# iOS FRONTEND
+# ================================
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+*.xcuserstate
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# CocoaPods
+Pods/
+*.xcworkspace
+!default.xcworkspace
+Podfile.lock
+
+# Swift Package Manager
+.build/
+Packages/
+Package.pins
+Package.resolved
+*.xcodeproj/
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcworkspace/contents.xcworkspacedata
+
+# ================================
+# SYSTEM FILES
+# ================================
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+
+# ================================
+# IDE AND EDITORS
+# ================================
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Vim
 *.swp
 *.swo
-.vscode/
-.idea/
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ================================
+# LOGS AND TEMPORARY FILES
+# ================================
 
 # Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
 
-# Android Studio
-*.iml
-.gradle/
-local.properties
-*.keystore
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# iOS
-Pods/
-DerivedData/
-xcuserdata/
-*.xcworkspace
-*.xcodeproj
+# Coverage
+.nyc_output
+.coverage
+.pytest_cache/
+htmlcov/
 
-# Misc
-*.log
+# ================================
+# DEPENDENCIES
+# ================================
+
+# Node.js (if any)
+node_modules/
+
+# ================================
+# SENSITIVE DATA
+# ================================
+
+# API Keys and secrets
+*.pem
+*.key
+secrets/
+credentials/
+config/secrets.*
+
+# ================================
+# MISC
+# ================================
+
+# Temporary files
+tmp/
+temp/
+.tmp/

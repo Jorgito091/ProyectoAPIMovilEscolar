@@ -4,7 +4,7 @@ from jose import JWTError, jwt
 from app.utils.jwt import SECRET_KEY, ALGORITHM
 from typing import Union, List
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 async def auth_middleware(request: Request, call_next):
     token = request.headers.get("Authorization")
@@ -30,9 +30,11 @@ def obtener_usuario(
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         matricula: str = payload.get("sub")
         rol: str = payload.get("rol")
+        id: int = payload.get("id")
+        nombre: str = payload.get("nombre")
         if matricula is None or rol is None:
             raise credentials_exception
-        usuario = {"matricula": matricula, "rol": rol}
+        usuario = {"matricula": matricula, "rol": rol, "id": id, "nombre": nombre}
     except JWTError:
         raise credentials_exception
     

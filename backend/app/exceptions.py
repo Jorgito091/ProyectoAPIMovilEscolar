@@ -1,7 +1,12 @@
-from fastapi import Request
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+import logging
+logger = logging.getLogger(__name__)
+
+
 
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     print(f"[HTTP ERROR] Request ID: {getattr(request.state, 'request_id', None)} | {exc.detail}")
@@ -11,13 +16,28 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     )
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    print(f"[VALIDATION ERROR] Request ID: {getattr(request.state, 'request_id', None)} | {exc.errors()}")
+    """
+    Handler personalizado para errores de validación que evita serializar FormData
+    """
+    errors = []
+    for error in exc.errors():
+        # Solo incluir campos serializables
+        error_dict = {
+            "type": error.get("type"),
+            "loc": list(error.get("loc", [])),
+            "msg": error.get("msg"),
+        }
+        # NO incluir 'input' ya que puede contener FormData
+        errors.append(error_dict)
+    
+    # Log del error
+    logger.error(f"[VALIDATION ERROR] Request ID: {request.state.request_id} | {errors}")
+    
     return JSONResponse(
-        status_code=422,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
-            "detail": exc.errors(),
-            "body": exc.body,
-            "request_id": getattr(request.state, "request_id", None)
+            "detail": errors,
+            "request_id": request.state.request_id
         }
     )
 

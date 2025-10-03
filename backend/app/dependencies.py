@@ -1,33 +1,50 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.repositories.user_repo import UserRepository
-from app.repositories.grupo_repo import GrupoRepository
-from app.repositories.tarea_repo import TareaRepository
-from app.services.user_service import UserService
-from app.services.grupo_service import GrupoService
-from app.services.tarea_service import TareaService
 
+from app.repositories import user_repo, clase_repo, tarea_repo, entrega_repo, inscripcion_repo
+from app.services import user_service, clase_service, tarea_service, entrega_service, inscripcion
 
-def get_user_repo(db: Session = Depends(get_db)) -> UserRepository:
-    return UserRepository(db)
+def get_usuario_repo(db: Session = Depends(get_db)) -> user_repo.UserRepository:
+    return user_repo.UserRepository(db)
 
+def get_clase_repo(db: Session = Depends(get_db)) -> clase_repo.ClaseRepository:
+    return clase_repo.ClaseRepository(db)
 
-def get_grupo_repo(db: Session = Depends(get_db)) -> GrupoRepository:
-    return GrupoRepository(db)
+def get_tarea_repo(db: Session = Depends(get_db)) -> tarea_repo.TareaRepository:
+    return tarea_repo.TareaRepository(db)
+    
+def get_entrega_repo(db: Session = Depends(get_db)) -> entrega_repo.EntregaRepository:
+    return entrega_repo.EntregaRepository(db)
 
+def get_inscripcion_repo(db: Session = Depends(get_db)) -> inscripcion_repo.InscripcionRepository:
+    return inscripcion_repo.InscripcionRepository(db)
 
-def get_tarea_repo(db: Session = Depends(get_db)) -> TareaRepository:
-    return TareaRepository(db)
+def get_usuario_service(repo: user_repo.UserRepository = Depends(get_usuario_repo)) -> user_service.UserService:
+    return user_service.UserService(repo)
 
+def get_clase_service(
+    clase_repo: clase_repo.ClaseRepository = Depends(get_clase_repo), 
+    usuario_repo: user_repo.UserRepository = Depends(get_usuario_repo)
+) -> clase_service.ClaseService:
+    return clase_service.ClaseService(clase_repo, usuario_repo)
 
-def get_user_service(repo: UserRepository = Depends(get_user_repo) , repo_grupo: GrupoRepository = Depends(get_grupo_repo)) -> UserService:
-    return UserService(repo, repo_grupo)
+def get_inscripcion_service(
+    inscripcion_repo: inscripcion_repo.InscripcionRepository = Depends(get_inscripcion_repo),
+    usuario_repo: user_repo.UserRepository = Depends(get_usuario_repo),
+    clase_repo: clase_repo.ClaseRepository = Depends(get_clase_repo)
+) -> inscripcion.InscripcionService:
+    return inscripcion.InscripcionService(inscripcion_repo, usuario_repo, clase_repo)
 
-
-def get_grupo_service(repo: GrupoRepository = Depends(get_grupo_repo) , repo_user: UserRepository = Depends(get_user_repo)) -> GrupoService:
-    return GrupoService(repo, repo_user)
-
-
-def get_tarea_service(repo: TareaRepository = Depends(get_tarea_repo) , repo_user: UserRepository = Depends(get_user_repo), repo_grupo: GrupoRepository = Depends(get_grupo_repo)) -> TareaService:
-    return TareaService(repo, repo_user,repo_grupo)
+def get_tarea_service(
+    tarea_repo: tarea_repo.TareaRepository = Depends(get_tarea_repo), 
+    clase_repo: clase_repo.ClaseRepository = Depends(get_clase_repo)
+) -> tarea_service.TareaService:
+    return tarea_service.TareaService(tarea_repo, clase_repo)
+    
+def get_entrega_service(
+    entrega_repo: entrega_repo.EntregaRepository = Depends(get_entrega_repo), 
+    tarea_repo: tarea_repo.TareaRepository = Depends(get_tarea_repo),
+    usuario_repo: user_repo.UserRepository = Depends(get_usuario_repo)
+) -> entrega_service.EntregaService:
+    return entrega_service.EntregaService(entrega_repo, tarea_repo, usuario_repo)

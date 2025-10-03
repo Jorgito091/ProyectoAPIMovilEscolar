@@ -1,10 +1,13 @@
 import jwt
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+import os
 
-# Cambia esto por tu propia clave secreta segura
-SECRET_KEY = "MiBomboClat123"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+load_dotenv()
+
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+ALGORITHM = os.getenv("ALGORITHM")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 def crear_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()

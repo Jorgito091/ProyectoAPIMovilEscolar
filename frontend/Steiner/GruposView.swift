@@ -3,12 +3,13 @@ import SwiftUI
 struct Grupo: Decodable, Identifiable {
     let id: Int
     let nombre: String
+    let maestro_id: Int?
 }
 
 struct GruposView: View {
     let accessToken: String
 
-    // Colores cálidos y oscuros estilo escolar
+    // Colores escolares
     let cafe = Color(red: 71/255, green: 53/255, blue: 37/255)
     let beige = Color(red: 230/255, green: 220/255, blue: 200/255)
     let cafeOscuro = Color(red: 51/255, green: 37/255, blue: 24/255)
@@ -100,6 +101,11 @@ struct GrupoItemView: View {
             Text("ID: \(grupo.id)")
                 .font(.subheadline)
                 .foregroundColor(cafe)
+            if let maestroID = grupo.maestro_id {
+                Text("Maestro ID: \(maestroID)")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
         }
         .padding(.vertical, 4)
     }

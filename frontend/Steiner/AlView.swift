@@ -9,7 +9,6 @@ struct AlView: View {
     }
     @State private var seccion: Seccion? = nil
 
-    // Colores cálidos y oscuros estilo escolar
     let cafe = Color(red: 71/255, green: 53/255, blue: 37/255)
     let beige = Color(red: 230/255, green: 220/255, blue: 200/255)
     let cafeOscuro = Color(red: 51/255, green: 37/255, blue: 24/255)
@@ -72,7 +71,7 @@ struct AlView: View {
     }
 }
 
-// Botón cálido y minimalista para elegir sección
+
 struct MinimalSectionButtonCafe: View {
     var text: String
     var selected: Bool

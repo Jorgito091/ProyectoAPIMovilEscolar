@@ -13,10 +13,20 @@ struct DocumentPicker: UIViewControllerRepresentable {
     }
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let types: [UTType] = [.item]
+        var types: [UTType] = [.pdf, .plainText, .image, .jpeg, .png, .rtf]
+        
+        // Agregar tipos de Microsoft Office si están disponibles
+        if let docxType = UTType("org.openxmlformats.wordprocessingml.document") {
+            types.append(docxType)
+        }
+        if let docType = UTType("com.microsoft.word.doc") {
+            types.append(docType)
+        }
+        
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
         picker.delegate = context.coordinator
         picker.allowsMultipleSelection = false
+        picker.shouldShowFileExtensions = true
         return picker
     }
 
@@ -34,11 +44,15 @@ struct DocumentPicker: UIViewControllerRepresentable {
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             let url = urls.first
             parent.fileURL = url
-            onPick(url)
+            DispatchQueue.main.async {
+                self.onPick(url)
+            }
         }
 
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-            onPick(nil)
+            DispatchQueue.main.async {
+                self.onPick(nil)
+            }
         }
     }
 }
@@ -57,9 +71,21 @@ struct DocumentPicker: NSViewControllerRepresentable {
         let controller = NSViewController()
         DispatchQueue.main.async {
             let panel = NSOpenPanel()
-            panel.allowedContentTypes = [.item]
+            var allowedTypes: [UTType] = [.pdf, .plainText, .image, .jpeg, .png, .rtf]
+            
+            // Agregar tipos de Microsoft Office si están disponibles
+            if let docxType = UTType("org.openxmlformats.wordprocessingml.document") {
+                allowedTypes.append(docxType)
+            }
+            if let docType = UTType("com.microsoft.word.doc") {
+                allowedTypes.append(docType)
+            }
+            
+            panel.allowedContentTypes = allowedTypes
             panel.allowsMultipleSelection = false
             panel.canChooseDirectories = false
+            panel.canChooseFiles = true
+            panel.title = "Seleccionar archivo para entregar"
             if panel.runModal() == .OK {
                 let url = panel.url
                 fileURL = url

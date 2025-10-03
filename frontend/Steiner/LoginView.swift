@@ -184,7 +184,7 @@ struct LoginView: View {
     func login() {
         isLoading = true
         mensaje = ""
-        guard let url = URL(string: "http://localhost:8000/user/login") else {
+        guard let url = URL(string: "http://localhost:8000/auth/login") else {
             mensaje = "URL incorrecta"
             isLoading = false
             return

@@ -20,16 +20,8 @@ struct TareaDetalleView: View, Identifiable {
             if let descripcion = tarea.descripcion {
                 Text("Descripción: \(descripcion)")
             }
-            if let fechaInicio = tarea.fecha_inicio {
-                Text("Inicio: \(fechaInicio)")
-            }
-            if let fechaEntrega = tarea.fecha_entrega {
-                Text("Entrega: \(fechaEntrega)")
-            }
-            if let completada = tarea.completada {
-                Text(completada ? "Completada" : "Pendiente")
-                    .foregroundColor(completada ? .green : .orange)
-            }
+            Text("Creada: \(tarea.fecha_creacion)")
+            Text("Entrega: \(tarea.fecha_limite)")
             Spacer()
         }
         .padding()

@@ -2,69 +2,51 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.repositories.user_repo import UserRepository
-from app.repositories.grupo_repo import GrupoRepository
+from app.repositories.clase_repo import ClaseRepository
 from app.models.user import User
-from app.schemas.user import UserCreate, UserUpdate, UserOut, UserWithGroup, UserLogin
+from app.schemas.user import UsuarioCreate, UsuarioUpdate, UsuarioOut, UsuarioLogin, UsuarioOut
 from app.schemas.token import Token
 from app.database import get_db
 from app.services.user_service import UserService
 from passlib.context import CryptContext
 from datetime import timedelta
+from app.dependencies import get_usuario_service
 from app.utils.jwt import crear_access_token
+from app.middlewares.auth import obtener_usuario
 
 router = APIRouter(prefix="/user", tags=["User"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def get_user_service(db: Session = Depends(get_db)):
-    user_repo = UserRepository(db)
-    grupo_repo = GrupoRepository(db)
-    return UserService(user_repo, grupo_repo)
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def register(
-    user_data: UserCreate,
-    user_service: UserService = Depends(get_user_service)
-):
-    return user_service.crear_usuario(user_data)
+@router.get("/me", response_model=UsuarioOut)
+def read_users_me(current_user: dict = Depends(obtener_usuario), user_service: UserService = Depends(get_usuario_service)):
+    # El ID del usuario viene del token decodificado por el middleware
+    user_id = current_user.get("id")
+    return user_service.obtener_por_id(user_id)
 
-@router.post("/login", response_model=Token)
-def login(
-    credentials: UserLogin,
-    user_service: UserService = Depends(get_user_service)
-):
-    user = user_service.autentificar_usuario(credentials.matricula, credentials.password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas")
-    token_data = {
-        "sub": str(user.id),
-        "rol": user.rol,
-        "nombre": user.nombre
-    }
-    access_token = crear_access_token(token_data)
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "rol": user.rol,
-        "alumno_id": user.id if user.rol == "alumno" else None
-    }
-
-@router.get("/alumnos", response_model=List[UserOut])
+@router.get("/alumnos", response_model=List[UsuarioOut])
 def listar_alumnos(
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_usuario_service)
 ):
     return user_service.obtener_alumnos()
 
-@router.get("/maestros", response_model=List[UserOut])
+@router.get("/maestros", response_model=List[UsuarioOut])
 def listar_maestros(
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_usuario_service)
 ):
     return user_service.obtener_maestros()
 
-@router.put("/update/{user_id}", response_model=UserOut)
+
+@router.get("/{usuario_id}", response_model=UsuarioOut)
+def read_user_by_id(usuario_id: int, user_service: UserService = Depends(get_usuario_service)):
+    return user_service.obtener_por_id(usuario_id)
+
+
+@router.put("/update/{user_id}", response_model=UsuarioOut)
 def actualizar_usuario(
     user_id: int,
-    update_data: UserUpdate,
-    user_service: UserService = Depends(get_user_service)
+    update_data: UsuarioUpdate,
+    user_service: UserService = Depends(get_usuario_service)
 ):
     data = update_data.dict(exclude_unset=True)
     if not data:
@@ -73,16 +55,3 @@ def actualizar_usuario(
             detail="No se enviaron datos para actualizar."
         )
     return user_service.actualizar_user(user_id, data)
-
-@router.get("/user/{user_id}/with-group", response_model=UserWithGroup)
-def obtener_usuario_con_grupo(
-    user_id: int,
-    user_service: UserService = Depends(get_user_service)
-):
-    user = user_service.obtener_por_id(user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado"
-        )
-    return user

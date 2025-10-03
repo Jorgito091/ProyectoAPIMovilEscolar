@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List
 from app.middlewares.auth import obtener_usuario
 from app.schemas.tarea import TareaCreate, TareaOut, TareaUpdate
 from app.services.tarea_service import TareaService
@@ -7,14 +8,9 @@ from app.middlewares.auth import verificar_alumno, verificar_maestro, verificar_
 
 router = APIRouter(prefix="/tareas", tags=["Tareas"])
 
-@router.post("/", response_model=TareaOut)
-def crear_tarea(
-    tarea: TareaCreate,
-    service: TareaService = Depends(get_tarea_service),
-    usuario_autenticado: dict = Depends(verificar_maestro),
-):
-    tarea_creada = service.crear_tarea(tarea)
-    return TareaOut.model_validate(tarea_creada)
+@router.post("/", response_model=TareaOut, status_code=201, dependencies=[Depends(verificar_maestro)])
+def crear_tarea(tarea_data: TareaCreate, service: TareaService = Depends(get_tarea_service)):
+    return service.crear_tarea(tarea_data)
 
 @router.get("/", response_model=list[TareaOut])
 def listar_tareas(
@@ -24,14 +20,6 @@ def listar_tareas(
     tareas = service.obtener_todas()
     return [TareaOut.model_validate(t) for t in tareas]
 
-@router.get("/completadas/{status}", response_model=list[TareaOut])
-def tareas_por_estado(
-    status: bool,
-    service: TareaService = Depends(get_tarea_service),
-    usuario_autenticado: dict = Depends(verificar_maestro_o_alumno)
-):
-    tareas = service.obtener_por_estado(status)
-    return [TareaOut.model_validate(t) for t in tareas]
 
 @router.get("/{id}", response_model=TareaOut)
 def tarea_por_id(
@@ -61,11 +49,6 @@ def eliminar_tarea(
     service.eliminar_tarea(id)
     return {"mensaje": f"Tarea {id} eliminada correctamente"}
 
-@router.get("/grupo/{grupo_id}", response_model=list[TareaOut])
-def tareas_por_grupo(
-    grupo_id: int,
-    service: TareaService = Depends(get_tarea_service),
-    usuario_autenticado: dict = Depends(verificar_maestro_o_alumno)
-):
-    tareas = service.obtener_por_grupo(grupo_id)
-    return [TareaOut.model_validate(t) for t in tareas]
+@router.get("/clase/{clase_id}", response_model=List[TareaOut])
+def obtener_tareas_por_clase(clase_id: int, service: TareaService = Depends(get_tarea_service)):
+    return service.obtener_por_clase(clase_id)

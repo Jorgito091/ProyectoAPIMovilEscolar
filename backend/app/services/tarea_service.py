@@ -1,30 +1,29 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.repositories.tarea_repo import TareaRepository
-from app.repositories.grupo_repo import GrupoRepository
+from app.repositories.clase_repo import ClaseRepository
 from app.repositories.user_repo import UserRepository
 from app.models.tarea import Tarea
 from app.schemas.tarea import TareaCreate
 
 class TareaService:
-    def __init__(self, repo: TareaRepository, user_repo: UserRepository, grupo_repo: GrupoRepository):
-        self.repo = repo
-        self.user_repo = user_repo
-        self.grupo_repo = grupo_repo
+    def __init__(self, tarea_repo: TareaRepository, clase_repo: ClaseRepository):
+        self.repo = tarea_repo
+        self.clase_repo = clase_repo
 
-    def crear_tarea(self, data: TareaCreate):
-        grupo = self.grupo_repo.obtener_por_id(data.grupo_id)
-        if not grupo:
+    def crear_tarea(self, data: TareaCreate) -> Tarea:
+        clase = self.clase_repo.obtener_por_id(data.clase_id)
+        if not clase:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El grupo especificado no existe."
+                detail="La clase especificada no existe."
             )
-        # SOLO UNA TAREA POR GRUPO:
-        nueva_tarea_data = data.model_dump()
-        # Si tu modelo requiere alumno_id obligatorio, asegúrate que sea nullable o no lo incluyas aquí
-        nueva_tarea = Tarea(**nueva_tarea_data)
-        self.repo.crear(nueva_tarea)
-        return nueva_tarea
+        
+        nueva_tarea = Tarea(**data.model_dump())
+        return self.repo.crear(nueva_tarea)
+
+    def obtener_por_clase(self, clase_id: int) -> list[Tarea]:
+        return self.repo.obtener_por_clase(clase_id)
 
     def obtener_todas(self):
         return self.repo.obtener_todas()
