@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.database import Base, engine
-from app.routers import auth, tarea_router, user_router, clase_router, entrega_router  
+from app.routers import auth, tarea_router, user_router, clase_router, entrega_router , inscripcion_router 
 from app.middlewares.request_context import request_context_middleware
 from app.middlewares.auth import auth_middleware  
 
@@ -30,3 +30,4 @@ app.include_router(tarea_router.router)
 app.include_router(clase_router.router)
 app.include_router(auth.router)
 app.include_router(entrega_router.router) 
+app.include_router(inscripcion_router.router)

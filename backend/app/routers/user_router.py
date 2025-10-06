@@ -1,26 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
-from app.repositories.user_repo import UserRepository
-from app.repositories.clase_repo import ClaseRepository
-from app.models.user import User
-from app.schemas.user import UsuarioCreate, UsuarioUpdate, UsuarioOut, UsuarioLogin, UsuarioOut
-from app.schemas.token import Token
-from app.database import get_db
+from app.schemas.user import UsuarioCreate, UsuarioUpdate, UsuarioOut
+from app.schemas.clase import ClaseOut, UsuarioSimple
 from app.services.user_service import UserService
-from passlib.context import CryptContext
-from datetime import timedelta
 from app.dependencies import get_usuario_service
-from app.utils.jwt import crear_access_token
-from app.middlewares.auth import obtener_usuario
 
 router = APIRouter(prefix="/user", tags=["User"])
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 @router.get("/me", response_model=UsuarioOut)
-def read_users_me(current_user: dict = Depends(obtener_usuario), user_service: UserService = Depends(get_usuario_service)):
-    # El ID del usuario viene del token decodificado por el middleware
+def read_users_me(
+    current_user: dict = Depends(get_usuario_service),
+    user_service: UserService = Depends(get_usuario_service)
+):
     user_id = current_user.get("id")
     return user_service.obtener_por_id(user_id)
 
@@ -36,11 +27,12 @@ def listar_maestros(
 ):
     return user_service.obtener_maestros()
 
-
 @router.get("/{usuario_id}", response_model=UsuarioOut)
-def read_user_by_id(usuario_id: int, user_service: UserService = Depends(get_usuario_service)):
+def read_user_by_id(
+    usuario_id: int,
+    user_service: UserService = Depends(get_usuario_service)
+):
     return user_service.obtener_por_id(usuario_id)
-
 
 @router.put("/update/{user_id}", response_model=UsuarioOut)
 def actualizar_usuario(
@@ -55,3 +47,21 @@ def actualizar_usuario(
             detail="No se enviaron datos para actualizar."
         )
     return user_service.actualizar_user(user_id, data)
+
+@router.get("/{alumno_id}/clases", response_model=List[ClaseOut])
+def obtener_clases_alumno(
+    alumno_id: int,
+    user_service: UserService = Depends(get_usuario_service)
+):
+    clases = user_service.obtener_clases_por_alumno(alumno_id)
+    clases_out = []
+    for clase in clases:
+        alumnos = [UsuarioSimple.model_validate(insc.alumno) for insc in clase.inscripciones]
+        clase_out = ClaseOut(
+            id=clase.id,
+            nombre=clase.nombre,
+            maestro=UsuarioSimple.model_validate(clase.maestro),
+            alumnos_inscritos=alumnos
+        )
+        clases_out.append(clase_out)
+    return clases_out

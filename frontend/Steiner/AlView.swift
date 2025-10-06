@@ -4,11 +4,6 @@ struct AlView: View {
     let accessToken: String
     let alumnoID: Int
 
-    enum Seccion {
-        case verTareas, verGrupos
-    }
-    @State private var seccion: Seccion? = nil
-
     let cafe = Color(red: 71/255, green: 53/255, blue: 37/255)
     let beige = Color(red: 230/255, green: 220/255, blue: 200/255)
     let cafeOscuro = Color(red: 51/255, green: 37/255, blue: 24/255)
@@ -27,41 +22,22 @@ struct AlView: View {
                 }
                 .padding(.top, 12)
 
-                HStack(spacing: 16) {
-                    MinimalSectionButtonCafe(
-                        text: "Ver tareas",
-                        selected: seccion == .verTareas,
-                        color: cafe,
-                        selectedColor: cafeOscuro,
-                        action: { seccion = .verTareas }
-                    )
-                    MinimalSectionButtonCafe(
-                        text: "Ver grupos",
-                        selected: seccion == .verGrupos,
-                        color: cafe,
-                        selectedColor: cafeOscuro,
-                        action: { seccion = .verGrupos }
-                    )
-                }
+                MinimalSectionButtonCafe(
+                    text: "Ver tareas",
+                    selected: true,
+                    color: cafe,
+                    selectedColor: cafeOscuro,
+                    action: {}
+                )
                 .padding(.horizontal)
 
                 Divider().background(cafe.opacity(0.25))
 
-                Group {
-                    if seccion == .verTareas {
-                        VerTareasView(accessToken: accessToken, alumnoID: alumnoID)
-                    } else if seccion == .verGrupos {
-                        GruposView(accessToken: accessToken)
-                    } else {
-                        Text("Selecciona una opción para continuar")
-                            .foregroundColor(cafe)
-                            .padding()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(beige.opacity(0.90))
-                .cornerRadius(18)
-                .shadow(color: cafeOscuro.opacity(0.08), radius: 8, y: 2)
+                VerTareasView(accessToken: accessToken, alumnoID: alumnoID)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(beige.opacity(0.90))
+                    .cornerRadius(18)
+                    .shadow(color: cafeOscuro.opacity(0.08), radius: 8, y: 2)
 
                 Spacer()
             }
@@ -70,7 +46,6 @@ struct AlView: View {
         }
     }
 }
-
 
 struct MinimalSectionButtonCafe: View {
     var text: String
