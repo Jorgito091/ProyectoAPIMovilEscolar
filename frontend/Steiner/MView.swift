@@ -59,9 +59,8 @@ struct MView: View {
                     case .crear:
                         CrearTareaView(accessToken: accessToken)
                     case .ver:
-                        // Si quieres pasar alumnoID y grupoID, agrega esos props a la view
-                        // Aquí lo llamo vacío (global) pero puedes ajustar si tienes un VerTareasView para maestro
-                        VerTareasView(accessToken: accessToken, alumnoID: userID, grupoID: nil)
+                        // <<--- Aquí va la vista para maestros
+                        VerTareasMaestroView(accessToken: accessToken, userID: userID)
                     case .editar:
                         EditarTareaView(accessToken: accessToken)
                     case .eliminar:

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct Grupo: Decodable, Identifiable, Equatable {
+struct Grupo: Decodable, Identifiable, Equatable , Hashable {
     let id: Int
     let nombre: String
     let maestro_id: Int?
