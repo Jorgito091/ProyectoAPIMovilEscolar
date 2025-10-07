@@ -3,7 +3,7 @@ from app.repositories.entrega_repo import EntregaRepository
 from app.repositories.tarea_repo import TareaRepository
 from app.repositories.user_repo import UserRepository
 from app.models.entrega import Entrega
-from app.schemas.entrega import EntregaCreate
+from app.schemas.entrega import EntregaCreate, EntregaUpdate  # <- Importa EntregaUpdate
 
 class EntregaService:
     def __init__(self, entrega_repo: EntregaRepository, tarea_repo: TareaRepository, usuario_repo: UserRepository):
@@ -20,7 +20,6 @@ class EntregaService:
         if not alumno:
             raise HTTPException(status_code=404, detail="El alumno no existe.")
             
-
         nueva_entrega = Entrega(
             alumno_id=alumno_id,
             tarea_id=tarea_id,
@@ -30,3 +29,13 @@ class EntregaService:
 
     def obtener_entregas_por_tarea(self, tarea_id: int) -> list[Entrega]:
         return self.repo.obtener_por_tarea(tarea_id)
+
+    def actualizar_entrega(self, entrega_id: int, data: EntregaUpdate) -> Entrega | None:
+        entrega = self.repo.obtener_por_id(entrega_id)
+        if not entrega:
+            return None
+        if data.calificacion is not None:
+            entrega.calificacion = data.calificacion
+        if data.comentarios is not None:
+            entrega.comentarios = data.comentarios
+        return self.repo.actualizar(entrega)

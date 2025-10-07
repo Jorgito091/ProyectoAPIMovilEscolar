@@ -34,5 +34,6 @@ def login(
         "access_token": access_token,
         "token_type": "bearer",
         "rol": user.rol,
-        "alumno_id": user.id if user.rol == "alumno" else None
+        "id": user.id  
     }
+  

@@ -2,70 +2,110 @@ import SwiftUI
 
 struct AlView: View {
     let accessToken: String
-    let alumnoID: Int
+    let userID: Int
 
-    let cafe = Color(red: 71/255, green: 53/255, blue: 37/255)
-    let beige = Color(red: 230/255, green: 220/255, blue: 200/255)
-    let cafeOscuro = Color(red: 51/255, green: 37/255, blue: 24/255)
+    // Paleta de colores
+    let tintoPrincipal = Color(red: 117/255, green: 22/255, blue: 46/255)
+    let tintoClaro = Color(red: 170/255, green: 36/255, blue: 63/255)
+    let blanco = Color.white
+    let grisClaro = Color(red: 230/255, green: 220/255, blue: 220/255)
+
+    @State private var grupos: [Grupo] = []
+    @State private var selectedGrupoID: Int? = nil
+    @State private var mensajeGrupo: String = ""
+    @State private var showQR = false
 
     var body: some View {
         ZStack {
-            cafeOscuro.ignoresSafeArea()
-            VStack(spacing: 28) {
+            tintoPrincipal.ignoresSafeArea()
+            VStack(spacing: 20) {
+                // Header con saludo y botón QR
                 HStack(spacing: 8) {
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 32))
-                        .foregroundColor(beige)
+                        .foregroundColor(tintoClaro)
                     Text("¡Bienvenido, Alumno!")
                         .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundColor(beige)
+                        .foregroundColor(blanco)
+                    Spacer()
+                    Button(action: { showQR = true }) {
+                        Image(systemName: "qrcode")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(tintoClaro)
+                            .padding(10)
+                            .background(blanco.opacity(0.22))
+                            .clipShape(Circle())
+                            .shadow(color: tintoPrincipal.opacity(0.15), radius: 3, y: 2)
+                    }
                 }
-                .padding(.top, 12)
+                .padding(.top, 24)
+                .padding(.bottom, 8)
+                .padding(.horizontal, 12)
 
-                MinimalSectionButtonCafe(
-                    text: "Ver tareas",
-                    selected: true,
-                    color: cafe,
-                    selectedColor: cafeOscuro,
-                    action: {}
-                )
+                // Picker de grupo
+                if grupos.isEmpty {
+                    ProgressView("Cargando grupos...")
+                        .onAppear { cargarGrupos() }
+                } else {
+                    Picker("Selecciona un grupo", selection: $selectedGrupoID) {
+                        ForEach(grupos) { grupo in
+                            Text(grupo.nombre).tag(grupo.id as Int?)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .padding(.horizontal)
+                    .background(grisClaro.opacity(0.8))
+                    .cornerRadius(10)
+                    .padding(.top, 8)
+                }
+
+                if !mensajeGrupo.isEmpty {
+                    Text(mensajeGrupo)
+                        .foregroundColor(.red)
+                        .padding(.horizontal)
+                }
+
+                // Aquí se llama a VerTareasView con los parámetros correctos
+                VStack(spacing: 28) {
+                    Divider().background(tintoClaro.opacity(0.25))
+                    if let grupoID = selectedGrupoID {
+                        VerTareasView(accessToken: accessToken, alumnoID: userID, grupoID: grupoID)
+                    } else {
+                        Text("Selecciona un grupo para ver las tareas.")
+                    }
+                    Spacer()
+                }
                 .padding(.horizontal)
-
-                Divider().background(cafe.opacity(0.25))
-
-                VerTareasView(accessToken: accessToken, alumnoID: alumnoID)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(beige.opacity(0.90))
-                    .cornerRadius(18)
-                    .shadow(color: cafeOscuro.opacity(0.08), radius: 8, y: 2)
-
-                Spacer()
             }
-            .padding(.top, 28)
-            .padding(.horizontal)
+        }
+        // Hoja modal para QR
+        .sheet(isPresented: $showQR) {
+            QRView(alumnoID: userID)
         }
     }
-}
 
-struct MinimalSectionButtonCafe: View {
-    var text: String
-    var selected: Bool
-    var color: Color
-    var selectedColor: Color
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(text)
-                .font(.body)
-                .fontWeight(.semibold)
-                .foregroundColor(selected ? Color.white : selectedColor)
-                .padding(.vertical, 12)
-                .frame(maxWidth: .infinity)
-                .background(selected ? color : Color.white.opacity(0.7))
-                .cornerRadius(12)
-                .shadow(color: selected ? color.opacity(0.18) : .clear, radius: 4, y: 1)
-                .animation(.easeInOut, value: selected)
+    func cargarGrupos() {
+        guard let url = URL(string: "http://localhost:8000/user/\(userID)/clases") else {
+            mensajeGrupo = "URL de grupos incorrecta"
+            return
         }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            DispatchQueue.main.async {
+                if let data = data {
+                    if let decoded = try? JSONDecoder().decode([Grupo].self, from: data) {
+                        grupos = decoded
+                        if let primero = decoded.first {
+                            selectedGrupoID = primero.id
+                        }
+                    } else {
+                        mensajeGrupo = "Error al decodificar los grupos"
+                    }
+                } else {
+                    mensajeGrupo = "No se pudieron cargar los grupos"
+                }
+            }
+        }.resume()
     }
 }

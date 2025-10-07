@@ -3,14 +3,13 @@ import SwiftUI
 struct VerTareasView: View {
     let accessToken: String
     let alumnoID: Int
+    let grupoID: Int?
 
-    // Colores cálidos y oscuros estilo escolar
-    let cafe = Color(red: 71/255, green: 53/255, blue: 37/255)
-    let beige = Color(red: 230/255, green: 220/255, blue: 200/255)
-    let cafeOscuro = Color(red: 51/255, green: 37/255, blue: 24/255)
+    // Paleta tinto
+    let tintoPrincipal = Color(red: 117/255, green: 22/255, blue: 46/255)
+    let tintoClaro = Color(red: 170/255, green: 36/255, blue: 63/255)
+    let blanco = Color.white
 
-    @State private var grupos: [Grupo] = []
-    @State private var selectedGrupoID: Int? = nil
     @State private var tareas: [Tarea] = []
     @State private var mensaje: String = ""
     @State private var isLoading = false
@@ -23,160 +22,112 @@ struct VerTareasView: View {
     @State private var uploadMessage: String = ""
     @State private var isUploading: Bool = false
 
+    // Token de carga para evitar sobrescribir resultados viejos
+    @State private var cargaToken: UUID = UUID()
+
     var body: some View {
         VStack(spacing: 16) {
-            // Picker de grupo (reemplaza al TextField anterior)
-            if grupos.isEmpty {
-                ProgressView("Cargando grupos...")
-                    .onAppear(perform: cargarGrupos)
-            } else {
-                Picker("Selecciona un grupo", selection: $selectedGrupoID) {
-                    ForEach(grupos) { grupo in
-                        Text(grupo.nombre).tag(grupo.id as Int?)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                .padding(.horizontal)
-                .background(beige.opacity(0.8))
-                .cornerRadius(10)
-                .onChange(of: selectedGrupoID) { _ in
-                    cargarTareas()
-                }
-            }
-
-            Button(action: cargarTareas) {
+            if let grupoID = grupoID {
                 if isLoading {
-                    ProgressView()
-                        .tint(beige)
+                    ProgressView("Cargando tareas...")
+                        .tint(tintoPrincipal)
+                } else if tareas.isEmpty {
+                    Text(mensaje.isEmpty ? "Por el momento no hay tareas que hacer, haz algo en tu tiempo libre :D" : mensaje)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding()
                 } else {
-                    Text("Ver tareas del grupo")
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
-                        .foregroundColor(beige)
-                }
-            }
-            .padding(.vertical, 10)
-            .background(cafe)
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .shadow(color: cafeOscuro.opacity(0.08), radius: 4, y: 1)
-            .disabled(selectedGrupoID == nil)
-
-            if !mensaje.isEmpty {
-                Text(mensaje)
-                    .foregroundColor(.red)
-                    .padding()
-            }
-
-            // NUEVO: Mostrar mensaje amigable si no hay tareas
-            if isLoading {
-                ProgressView("Cargando tareas...")
-            } else if tareas.isEmpty && selectedGrupoID != nil {
-                Text("Por el momento no hay tareas que hacer, haz algo en tu tiempo libre :D")
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding()
-            } else {
-                List(tareas) { tarea in
-                    TareaItemView(
-                        tarea: tarea,
-                        onTap: { selectedTarea = tarea },
-                        onUpload: {
-                            tareaParaEntrega = tarea
-                            showDocumentPicker = true
-                        },
-                        isUploading: isUploading && tareaParaEntrega?.id == tarea.id
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .padding(.vertical, 2)
-                }
-                .sheet(item: $selectedTarea) { tarea in
-                    TareaDetalleView(tarea: tarea)
-                }
-                // Picker de archivos
-                .sheet(isPresented: $showDocumentPicker) {
-                    DocumentPicker(fileURL: $selectedFileURL) { url in
-                        showDocumentPicker = false
-                        if let tarea = tareaParaEntrega, let fileURL = url {
-                            uploadMessage = "Preparando archivo..."
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                subirEntrega(tarea: tarea, alumnoID: alumnoID, fileURL: fileURL)
+                    List(tareas) { tarea in
+                        TareaItemView(
+                            tarea: tarea,
+                            onTap: { selectedTarea = tarea },
+                            onUpload: {
+                                tareaParaEntrega = tarea
+                                showDocumentPicker = true
+                            },
+                            isUploading: isUploading && tareaParaEntrega?.id == tarea.id
+                        )
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .padding(.vertical, 2)
+                    }
+                    .sheet(item: $selectedTarea) { tarea in
+                        TareaDetalleView(tarea: tarea)
+                    }
+                    .sheet(isPresented: $showDocumentPicker) {
+                        DocumentPicker(fileURL: $selectedFileURL) { url in
+                            showDocumentPicker = false
+                            if let tarea = tareaParaEntrega, let fileURL = url {
+                                uploadMessage = "Preparando archivo..."
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    subirEntrega(tarea: tarea, alumnoID: alumnoID, fileURL: fileURL)
+                                }
+                            } else if url == nil {
+                                uploadMessage = "Selección cancelada"
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                    uploadMessage = ""
+                                }
                             }
-                        } else if url == nil {
-                            uploadMessage = "Selección cancelada"
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                uploadMessage = ""
-                            }
+                            selectedFileURL = nil
                         }
-                        selectedFileURL = nil
                     }
                 }
+            } else {
+                Text("Selecciona un grupo para ver las tareas.")
+                    .foregroundColor(.gray)
             }
 
             if !uploadMessage.isEmpty {
                 Text(uploadMessage)
-                    .foregroundColor(cafe)
+                    .foregroundColor(tintoPrincipal)
                     .padding()
             }
         }
         .padding(.vertical)
-    }
-
-    func cargarGrupos() {
-        guard let url = URL(string: "http://localhost:8000/user/\(alumnoID)/clases") else {
-            mensaje = "URL de grupos incorrecta"
-            return
-        }
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: request) { data, _, _ in
-            if let data = data {
-                if let decoded = try? JSONDecoder().decode([Grupo].self, from: data) {
-                    DispatchQueue.main.async {
-                        grupos = decoded
-                        if let primero = grupos.first {
-                            selectedGrupoID = primero.id
-                        }
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        mensaje = "Error al decodificar los grupos"
-                    }
-                }
-            } else {
-                DispatchQueue.main.async {
-                    mensaje = "No se pudieron cargar los grupos"
-                }
-            }
-        }.resume()
-    }
-
-    func cargarTareas() {
-        guard let grupoId = selectedGrupoID else {
+        .onChange(of: grupoID) { newGrupoID in
+            cargaToken = UUID()
             tareas = []
-            mensaje = "Selecciona un grupo"
-            return
+            mensaje = ""
+            isLoading = true
+            if let gid = newGrupoID {
+                cargarTareas(for: gid, token: cargaToken)
+            } else {
+                isLoading = false
+            }
         }
-        isLoading = true
-        mensaje = ""
-        tareas = []
+        .onAppear {
+            if let gid = grupoID, tareas.isEmpty {
+                cargaToken = UUID()
+                isLoading = true
+                cargarTareas(for: gid, token: cargaToken)
+            }
+        }
+    }
+
+    func cargarTareas(for grupoId: Int, token: UUID) {
         guard let url = URL(string: "http://localhost:8000/tareas/clase/\(grupoId)") else {
             mensaje = "URL incorrecta"
             isLoading = false
+            tareas = []
             return
         }
+        mensaje = ""
+        tareas = []
+        isLoading = true
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         URLSession.shared.dataTask(with: request) { data, _, error in
             DispatchQueue.main.async {
+                if token != cargaToken { return }
                 isLoading = false
                 if let error = error {
                     mensaje = "Error: \(error.localizedDescription)"
+                    tareas = []
                     return
                 }
                 guard let data = data else {
                     mensaje = "Sin datos"
+                    tareas = []
                     return
                 }
                 do {
@@ -187,6 +138,7 @@ struct VerTareasView: View {
                     }
                 } catch {
                     mensaje = "Error al decodificar las tareas"
+                    tareas = []
                 }
             }
         }.resume()
@@ -213,28 +165,17 @@ struct VerTareasView: View {
         let fileExtension = fileURL.pathExtension.lowercased()
         let mimeType: String
         switch fileExtension {
-        case "pdf":
-            mimeType = "application/pdf"
-        case "jpg", "jpeg":
-            mimeType = "image/jpeg"
-        case "png":
-            mimeType = "image/png"
-        case "gif":
-            mimeType = "image/gif"
-        case "txt":
-            mimeType = "text/plain"
-        case "rtf":
-            mimeType = "application/rtf"
-        case "doc":
-            mimeType = "application/msword"
-        case "docx":
-            mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        case "xlsx":
-            mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        case "pptx":
-            mimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        default:
-            mimeType = "application/octet-stream"
+        case "pdf": mimeType = "application/pdf"
+        case "jpg", "jpeg": mimeType = "image/jpeg"
+        case "png": mimeType = "image/png"
+        case "gif": mimeType = "image/gif"
+        case "txt": mimeType = "text/plain"
+        case "rtf": mimeType = "application/rtf"
+        case "doc": mimeType = "application/msword"
+        case "docx": mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        case "xlsx": mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        case "pptx": mimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        default: mimeType = "application/octet-stream"
         }
 
         let boundary = "Boundary-\(UUID().uuidString)"

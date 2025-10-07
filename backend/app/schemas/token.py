@@ -4,4 +4,4 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     rol: str
-    alumno_id: int | None = None
+    id: int

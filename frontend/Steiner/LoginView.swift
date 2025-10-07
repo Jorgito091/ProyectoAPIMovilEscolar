@@ -4,7 +4,7 @@ struct LoginResponse: Decodable {
     let access_token: String
     let token_type: String
     let rol: String
-    let alumno_id: Int?
+    let id: Int
 }
 
 struct LoginView: View {
@@ -16,11 +16,11 @@ struct LoginView: View {
     @State private var shouldNavigate = false
     @State private var showForgotPasswordAlert = false
 
-    // Colores escolares y oscuros
-    let cafe = Color(red: 71/255, green: 53/255, blue: 37/255)
-    let beige = Color(red: 230/255, green: 220/255, blue: 200/255)
-    let cafeOscuro = Color(red: 51/255, green: 37/255, blue: 24/255)
-    let fondoOscuro = Color(red: 34/255, green: 27/255, blue: 20/255)
+    // Paleta tinto
+    let tintoPrincipal = Color(red: 117/255, green: 22/255, blue: 46/255)
+    let tintoClaro = Color(red: 170/255, green: 36/255, blue: 63/255)
+    let blanco = Color.white
+    let grisClaro = Color(red: 230/255, green: 220/255, blue: 220/255)
 
     var body: some View {
         NavigationStack {
@@ -28,83 +28,104 @@ struct LoginView: View {
                 fondoView
                 loginCard
             }
+            .navigationDestination(isPresented: $shouldNavigate) {
+                if let response = loginResponse {
+                    if response.rol == "alumno" {
+                        AlView(accessToken: response.access_token, userID: response.id)
+                    } else if response.rol == "maestro" {
+                        MView(accessToken: response.access_token, userID: response.id)
+                    } else {
+                        Text("Rol no reconocido")
+                    }
+                }
+            }
         }
     }
 
-    // Fondo escolar oscuro y café
     var fondoView: some View {
-        fondoOscuro
+        LinearGradient(gradient: Gradient(colors: [tintoPrincipal, tintoClaro]), startPoint: .topLeading, endPoint: .bottomTrailing)
             .ignoresSafeArea()
             .overlay(
-                Image("login.jpg")
-                    .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
-                    .blur(radius: 12)
-                    .overlay(cafe.opacity(0.32))
+                ZStack {
+                    Circle()
+                        .fill(tintoClaro.opacity(0.18))
+                        .frame(width: 340, height: 340)
+                        .offset(x: -120, y: -220)
+                    Circle()
+                        .fill(tintoPrincipal.opacity(0.10))
+                        .frame(width: 210, height: 210)
+                        .offset(x: 140, y: 250)
+                }
             )
     }
 
-    // Tarjeta principal separada
     var loginCard: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 36) {
             headerView
             fieldsView
             loginButton
             forgotPasswordButton
             errorMessage
-            navigationSection
         }
-        .padding(.vertical, 38)
-        .padding(.horizontal, 22)
-        .frame(maxWidth: 380)
+        .padding(.vertical, 40)
+        .padding(.horizontal, 28)
+        .frame(maxWidth: 390)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(beige.opacity(0.90))
-                .shadow(color: cafe.opacity(0.13), radius: 14, x: 0, y: 5)
+            RoundedRectangle(cornerRadius: 34, style: .continuous)
+                .fill(blanco)
+                .shadow(color: tintoPrincipal.opacity(0.09), radius: 22, x: 0, y: 6)
         )
-        .padding()
+        .overlay(
+            RoundedRectangle(cornerRadius: 34)
+                .stroke(tintoClaro.opacity(0.22), lineWidth: 1.4)
+        )
+        .padding(.horizontal)
+        .padding(.vertical, 14)
     }
 
     var headerView: some View {
-        HStack {
-            Image(systemName: "book.closed.fill")
-                .font(.system(size: 34))
-                .foregroundColor(beige)
+        VStack(spacing: 8) {
+            Image(systemName: "graduationcap.fill")
+                .font(.system(size: 44))
+                .foregroundColor(tintoPrincipal)
                 .shadow(radius: 3, y: 2)
+                .padding(.bottom, 2)
+            Text("Bienvenido")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundColor(tintoPrincipal)
             Text("Portal Escolar")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundColor(cafeOscuro)
+                .font(.system(size: 20, weight: .medium, design: .rounded))
+                .foregroundColor(.gray)
         }
-        .padding(.bottom, 10)
+        .padding(.bottom, 12)
     }
 
     var fieldsView: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
             HStack {
                 Image(systemName: "person.fill")
-                    .foregroundColor(cafe)
+                    .foregroundColor(tintoPrincipal)
                 TextField("Matrícula", text: $matricula)
                     .textContentType(.username)
-                    .foregroundColor(cafeOscuro)
-                    
+                    .foregroundColor(.primary)
+                    .autocapitalization(.none)
             }
-            .padding(12)
-            .background(beige.opacity(0.9))
-            .cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(cafe.opacity(0.2)))
+            .padding(14)
+            .background(grisClaro.opacity(0.55))
+            .cornerRadius(18)
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(tintoPrincipal.opacity(0.22)))
 
             HStack {
                 Image(systemName: "lock.fill")
-                    .foregroundColor(cafe)
+                    .foregroundColor(tintoPrincipal)
                 SecureField("Contraseña", text: $password)
                     .textContentType(.password)
-                    .foregroundColor(cafeOscuro)
+                    .foregroundColor(.primary)
             }
-            .padding(12)
-            .background(beige.opacity(0.9))
-            .cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(cafe.opacity(0.2)))
+            .padding(14)
+            .background(grisClaro.opacity(0.55))
+            .cornerRadius(18)
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(tintoPrincipal.opacity(0.22)))
         }
     }
 
@@ -114,35 +135,38 @@ struct LoginView: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle())
-                        .tint(beige)
+                        .tint(.white)
                 } else {
                     Text("Entrar")
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(beige)
+                        .foregroundColor(.white)
+                        .shadow(radius: 2, y: 1)
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(cafe)
-            .cornerRadius(14)
-            .shadow(color: cafeOscuro.opacity(0.22), radius: 8, y: 2)
+            .padding(.vertical, 15)
+            .background(LinearGradient(gradient: Gradient(colors: [tintoPrincipal, tintoClaro]), startPoint: .leading, endPoint: .trailing))
+            .cornerRadius(18)
+            .shadow(color: tintoPrincipal.opacity(0.23), radius: 10, y: 4)
             .animation(.easeInOut, value: isLoading)
         }
         .disabled(isLoading)
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 8)
+        .padding(.top, 2)
     }
 
     var forgotPasswordButton: some View {
         Button(action: { showForgotPasswordAlert = true }) {
-            Text("Olvidé mi contraseña")
+            Text("¿Olvidaste tu contraseña?")
                 .font(.footnote)
-                .foregroundColor(cafeOscuro)
+                .foregroundColor(tintoPrincipal)
                 .underline()
         }
-        .alert("Al rato hago eso", isPresented: $showForgotPasswordAlert) {
+        .alert("¡Pronto estará disponible la recuperación de contraseña!", isPresented: $showForgotPasswordAlert) {
             Button("OK", role: .cancel) { }
         }
+        .padding(.top, -8)
     }
 
     var errorMessage: some View {
@@ -155,29 +179,6 @@ struct LoginView: View {
                     .padding(.horizontal, 8)
                     .transition(.opacity)
             }
-        }
-    }
-
-    var navigationSection: some View {
-        NavigationLink(
-            destination: destinationView,
-            isActive: $shouldNavigate,
-            label: { EmptyView() }
-        )
-    }
-
-    @ViewBuilder
-    var destinationView: some View {
-        if let response = loginResponse {
-            if response.rol == "alumno" {
-                AlView(accessToken: response.access_token, alumnoID: response.alumno_id ?? -1)
-            } else if response.rol == "maestro" {
-                MView(accessToken: response.access_token)
-            } else {
-                Text("Rol no reconocido")
-            }
-        } else {
-            EmptyView()
         }
     }
 
