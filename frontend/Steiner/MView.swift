@@ -61,13 +61,13 @@ struct MView: View {
                 Group {
                     switch selected {
                     case .crear:
-                        CrearTareaView(accessToken: accessToken)
+                        CrearTareaView(accessToken: accessToken, userID: userID)
                     case .ver:
                         VerTareasMaestroView(accessToken: accessToken, userID: userID)
                     case .editar:
-                        EditarTareaView(accessToken: accessToken)
+                        EditarTareaView(accessToken: accessToken, userID: userID)
                     case .eliminar:
-                        EliminarTareaView(accessToken: accessToken)
+                        EliminarTareaView(accessToken: accessToken, userID: userID)
                     case .qr:
                         SignQRView(accessToken: accessToken, userID: userID)
                     case .asistencias:

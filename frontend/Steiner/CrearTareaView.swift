@@ -1,17 +1,20 @@
 import SwiftUI
-
 struct CrearTareaView: View {
     let accessToken: String
+    let userID: Int  // Necesario para cargar clases impartidas
     var onTareaCreada: (() -> Void)? = nil
 
     @State private var titulo: String = ""
     @State private var descripcion: String = ""
-    @State private var claseID: String = ""
     @State private var fechaLimite: Date = Date()
     @State private var usarFechaLimite = false
     @State private var isLoading = false
     @State private var mensaje = ""
     @State private var success: Bool? = nil
+
+    // Estados para clases y picker
+    @State private var clases: [Clase] = []
+    @State private var claseSeleccionada: Clase? = nil
 
     var body: some View {
         VStack {
@@ -21,9 +24,27 @@ struct CrearTareaView: View {
             TextField("Descripción", text: $descripcion)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-            TextField("ID de la Clase", text: $claseID)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding(.horizontal)
+
+            if clases.isEmpty {
+                ProgressView("Cargando clases...")
+                    .padding(.horizontal)
+            } else {
+                VStack(alignment: .leading) {
+                    Text("Selecciona la clase:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                    Picker("Clase", selection: $claseSeleccionada) {
+                        ForEach(clases, id: \.self) { clase in
+                            Text(clase.nombre).tag(clase as Clase?)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(height: 120)
+                    .padding(.horizontal)
+                }
+            }
+
             Toggle("Fecha límite", isOn: $usarFechaLimite)
                 .padding(.horizontal)
             if usarFechaLimite {
@@ -53,10 +74,34 @@ struct CrearTareaView: View {
                     .padding()
             }
         }
+        .onAppear { cargarClasesImpartidas() }
+    }
+
+    func cargarClasesImpartidas() {
+        guard let url = URL(string: "http://localhost:8000/user/\(userID)") else {
+            mensaje = "URL de usuario incorrecta"
+            return
+        }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            DispatchQueue.main.async {
+                if let data = data,
+                   let detalle = try? JSONDecoder().decode(UsuarioDetalle.self, from: data),
+                   let clasesImpartidas = detalle.clases_impartidas {
+                    self.clases = clasesImpartidas
+                    if let first = clasesImpartidas.first {
+                        claseSeleccionada = first
+                    }
+                } else {
+                    mensaje = "No se pudieron obtener las clases del usuario"
+                }
+            }
+        }.resume()
     }
 
     func crearTarea() {
-        guard let claseIdInt = Int(claseID), !titulo.isEmpty else {
+        guard let clase = claseSeleccionada, !titulo.isEmpty else {
             mensaje = "Completa todos los campos obligatorios"
             success = false
             return
@@ -68,7 +113,7 @@ struct CrearTareaView: View {
         var tareaData: [String: Any] = [
             "titulo": titulo,
             "descripcion": descripcion,
-            "clase_id": claseIdInt
+            "clase_id": clase.id
         ]
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
@@ -112,7 +157,7 @@ struct CrearTareaView: View {
                     mensaje = ""
                     titulo = ""
                     descripcion = ""
-                    claseID = ""
+                    claseSeleccionada = clases.first
                     usarFechaLimite = false
                     onTareaCreada?()
                 } else {
