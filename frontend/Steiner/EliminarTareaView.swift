@@ -4,6 +4,12 @@ struct EliminarTareaView: View {
     let accessToken: String
     let userID: Int
     var onTareaEliminada: (() -> Void)? = nil
+    let tareaID: Int
+
+
+    @State private var mostrarAlerta = false
+    @State private var mensajeAlerta = ""
+    @State private var mostrarExito = false
 
     @State private var clases: [Clase] = []
     @State private var selectedClase: Clase? = nil
@@ -15,6 +21,13 @@ struct EliminarTareaView: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            if mostrarExito {
+                Text("¡Tarea eliminada!")
+                    .foregroundColor(.green)
+                    .bold()
+                    .padding(.top, 8)
+            }
+
             // Picker de clases
             if clases.isEmpty {
                 ProgressView("Cargando materias...")
@@ -33,7 +46,7 @@ struct EliminarTareaView: View {
             }
 
             // Picker de tareas
-            if let clase = selectedClase {
+            if let _ = selectedClase {
                 if isLoading {
                     ProgressView("Cargando tareas...")
                 } else if tareas.isEmpty {
@@ -84,6 +97,13 @@ struct EliminarTareaView: View {
             } else {
                 isLoading = false
             }
+        }
+        .alert(isPresented: $mostrarAlerta) {
+            Alert(
+                title: Text("Aviso"),
+                message: Text(mensajeAlerta),
+                dismissButton: .default(Text("Cerrar"))
+            )
         }
     }
 
@@ -151,12 +171,15 @@ struct EliminarTareaView: View {
         }.resume()
     }
 
-    // Eliminar tarea
+    // Eliminar tarea con manejo de errores y alerta amigable
     func eliminarTarea(tareaId: Int) {
         isLoading = true
         mensaje = ""
+        mostrarExito = false
+
         guard let url = URL(string: "http://127.0.0.1:8000/tareas/\(tareaId)") else {
-            mensaje = "URL incorrecta"
+            mensajeAlerta = "URL incorrecta"
+            mostrarAlerta = true
             isLoading = false
             return
         }
@@ -164,26 +187,40 @@ struct EliminarTareaView: View {
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-        URLSession.shared.dataTask(with: request) { _, response, error in
+        URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 isLoading = false
                 if let error = error {
-                    mensaje = "Error: \(error.localizedDescription)"
+                    mensajeAlerta = "Error de red: \(error.localizedDescription)"
+                    mostrarAlerta = true
                     return
                 }
                 guard let httpResponse = response as? HTTPURLResponse else {
-                    mensaje = "Sin respuesta"
+                    mensajeAlerta = "Sin respuesta del servidor"
+                    mostrarAlerta = true
                     return
                 }
                 if httpResponse.statusCode == 200 {
-                    mensaje = "¡Tarea eliminada!"
+                    mostrarExito = true
                     tareaSeleccionada = nil
                     tareas.removeAll(where: { $0.id == tareaId })
                     onTareaEliminada?()
+                } else if httpResponse.statusCode == 409 || httpResponse.statusCode == 400 {
+                   
+                    if let data = data,
+                        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                        let detail = json["detail"] as? String {
+                        mensajeAlerta = detail
+                    } else {
+                        mensajeAlerta = "No se puede eliminar esta tarea porque tiene entregas asociadas.\nY no hay presupuesto para pagar a sistemas asi que ni modo :C."
+                    }
+                    mostrarAlerta = true
                 } else {
-                    mensaje = "Error al eliminar (\(httpResponse.statusCode))"
+                    mensajeAlerta = "No se puede master , alguien ya subio y no hay presupuesto para eso , te me cuidas (\(httpResponse.statusCode))."
+                    mostrarAlerta = true
                 }
             }
         }.resume()
     }
 }
+

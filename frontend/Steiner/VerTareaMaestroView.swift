@@ -1,12 +1,5 @@
 import SwiftUI
 
-struct Maestro: Identifiable, Decodable {
-    let id: Int
-    let nombre: String
-    let clases_impartidas: [Clase]
-}
-
-
 struct VerTareasMaestroView: View {
     let accessToken: String
     let userID: Int
@@ -16,7 +9,15 @@ struct VerTareasMaestroView: View {
     @State private var tareas: [TareaOut] = []
     @State private var mensaje: String = ""
     @State private var isLoading = false
+
+    // Para sheet de detalle, editar, eliminar
     @State private var tareaSeleccionada: TareaOut? = nil
+    @State private var accion: AccionTarea? = nil
+
+    enum AccionTarea: Identifiable {
+        case checar, editar, eliminar
+        var id: Int { hashValue }
+    }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -37,8 +38,8 @@ struct VerTareasMaestroView: View {
                 .padding(.top, 8)
             }
 
-            // Mostrar tareas o mensaje según materia
-            if let clase = selectedClase {
+            // Lista de tareas
+            if let _ = selectedClase {
                 if isLoading {
                     ProgressView("Cargando tareas...")
                 } else if tareas.isEmpty {
@@ -48,15 +49,32 @@ struct VerTareasMaestroView: View {
                         .padding()
                 } else {
                     List(tareas) { tarea in
-                        Button(action: { tareaSeleccionada = tarea }) {
-                            HStack {
-                                Text(tarea.titulo)
-                                    .font(.headline)
-                                Spacer()
-                                Image(systemName: "chevron.right")
+                        HStack {
+                            Text(tarea.titulo)
+                                .font(.headline)
+                            Spacer()
+                            Menu {
+                                Button("Checar", systemImage: "doc.text.magnifyingglass") {
+                                    tareaSeleccionada = tarea
+                                    accion = .checar
+                                }
+                                Button("Editar", systemImage: "pencil") {
+                                    tareaSeleccionada = tarea
+                                    accion = .editar
+                                }
+                                Button("Eliminar", systemImage: "trash", role: .destructive) {
+                                    tareaSeleccionada = tarea
+                                    accion = .eliminar
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.title3)
+                                    .foregroundColor(.gray)
+                                    .padding(.vertical, 6)
                             }
                         }
                     }
+                    .listStyle(.plain)
                 }
             } else {
                 Text("Selecciona una materia para ver las tareas.")
@@ -74,15 +92,26 @@ struct VerTareasMaestroView: View {
                 isLoading = false
             }
         }
-        .sheet(item: $tareaSeleccionada) { tarea in
-            CalTareaView(
-                accessToken: accessToken,
-                tareaID: tarea.id
-            )
+        // Sheet para cada acción sobre la tarea seleccionada
+        .sheet(item: $accion) { accion in
+            switch accion {
+            case .checar:
+                if let tarea = tareaSeleccionada {
+                    CalTareaView(accessToken: accessToken, tareaID: tarea.id)
+                }
+            case .editar:
+                if let tarea = tareaSeleccionada {
+                    EditarTareaView(accessToken: accessToken, userID: userID, tareaID: tarea.id)
+                }
+            case .eliminar:
+                if let tarea = tareaSeleccionada {
+                    EliminarTareaView(accessToken: accessToken, userID: userID, tareaID: tarea.id)
+                }
+            }
         }
     }
 
-    // Cargar clases que imparte el maestro
+    // Funciones de red (idénticas a tu ejemplo)
     func cargarMateriasDeMaestro() {
         guard let url = URL(string: "http://127.0.0.1:8000/user/\(userID)") else {
             mensaje = "URL incorrecta para maestro"
@@ -144,4 +173,9 @@ struct VerTareasMaestroView: View {
             }
         }.resume()
     }
+}
+struct Maestro: Identifiable, Decodable {
+    let id: Int
+    let nombre: String
+    let clases_impartidas: [Clase]
 }

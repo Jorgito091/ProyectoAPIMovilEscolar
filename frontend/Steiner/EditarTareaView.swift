@@ -3,6 +3,7 @@ import SwiftUI
 struct EditarTareaView: View {
     let accessToken: String
     let userID: Int
+    let tareaID: Int
     var onTareaEditada: (() -> Void)? = nil
 
     @State private var clases: [Clase] = []
