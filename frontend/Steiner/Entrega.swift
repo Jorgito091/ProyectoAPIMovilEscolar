@@ -15,7 +15,9 @@ struct UsuarioSimple: Decodable {
     let nombre: String
 }
 
-struct TareaOut: Identifiable, Decodable , Hashable  {
+struct TareaOut: Identifiable, Decodable, Hashable {
     let id: Int
     let titulo: String
+    let descripcion: String?
+    let fecha_limite: String?
 }

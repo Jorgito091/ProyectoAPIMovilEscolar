@@ -5,39 +5,29 @@ struct MView: View {
     let userID: Int
 
     enum Seccion: String, CaseIterable, Identifiable {
-        case crear = "Crear"
         case ver = "Ver"
-        case editar = "Editar"
-        case eliminar = "Eliminar"
         case qr = "QR"
         case asistencias = "Asistencias"
 
         var id: String { self.rawValue }
         var icon: String {
             switch self {
-            case .crear: return "plus.circle.fill"
             case .ver: return "list.bullet.rectangle.portrait"
-            case .editar: return "pencil.circle.fill"
-            case .eliminar: return "trash.circle.fill"
             case .qr: return "qrcode.viewfinder"
             case .asistencias: return "person.3.fill"
             }
         }
         var color: Color {
             switch self {
-            case .crear: return .blue
             case .ver: return .green
-            case .editar: return .orange
-            case .eliminar: return .red
             case .qr: return .mint
             case .asistencias: return .purple
             }
         }
     }
 
-    static let tabSections: [Seccion] = [.crear, .ver, .editar, .eliminar, .qr, .asistencias]
+    static let tabSections: [Seccion] = [.ver, .qr, .asistencias]
     @State private var selected: Seccion = .ver
-    @State private var selectedClase: Clase? = nil
 
     var body: some View {
         NavigationStack {
@@ -60,18 +50,12 @@ struct MView: View {
                 // Sección dinámica
                 Group {
                     switch selected {
-                    case .crear:
-                        CrearTareaView(accessToken: accessToken)
                     case .ver:
                         VerTareasMaestroView(accessToken: accessToken, userID: userID)
-                    case .editar:
-                        EditarTareaView(accessToken: accessToken)
-                    case .eliminar:
-                        EliminarTareaView(accessToken: accessToken)
                     case .qr:
                         SignQRView(accessToken: accessToken, userID: userID)
                     case .asistencias:
-                        AsisView() // <-- Aquí se llama la vista de asistencias sin parámetros ni lógica
+                        AsisView()
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
