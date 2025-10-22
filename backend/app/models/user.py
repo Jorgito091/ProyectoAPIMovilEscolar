@@ -14,3 +14,5 @@ class User(Base):
     inscripciones = relationship("Inscripcion", back_populates="alumno")
     entregas = relationship("Entrega", back_populates="alumno")
     clases_impartidas = relationship("Clase", back_populates="maestro")
+    
+    asistencias = relationship("Asistencia", back_populates="alumno")

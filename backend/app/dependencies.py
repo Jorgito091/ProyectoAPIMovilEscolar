@@ -2,8 +2,8 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 
-from app.repositories import user_repo, clase_repo, tarea_repo, entrega_repo, inscripcion_repo
-from app.services import user_service, clase_service, tarea_service, entrega_service, inscripcion
+from app.repositories import user_repo, clase_repo, tarea_repo, entrega_repo, inscripcion_repo, asistencia_repo
+from app.services import user_service, clase_service, tarea_service, entrega_service, inscripcion,asistencia_service
 
 def get_usuario_repo(db: Session = Depends(get_db)) -> user_repo.UserRepository:
     return user_repo.UserRepository(db)
@@ -22,6 +22,16 @@ def get_inscripcion_repo(db: Session = Depends(get_db)) -> inscripcion_repo.Insc
 
 def get_usuario_service(repo: user_repo.UserRepository = Depends(get_usuario_repo)) -> user_service.UserService:
     return user_service.UserService(repo)
+
+def get_asistencia_repo(db: Session = Depends(get_db)) -> asistencia_repo.AsistenciaRepository:
+    return asistencia_repo.AsistenciaRepository(db)
+
+def get_asistencia_service(
+    asistencia_repo: asistencia_repo.AsistenciaRepository = Depends(get_asistencia_repo),
+    clase_repo: clase_repo.ClaseRepository = Depends(get_clase_repo),
+    usuario_repo: user_repo.UserRepository = Depends(get_usuario_repo)
+) -> asistencia_service.AsistenciaService:
+    return asistencia_service.AsistenciaService(asistencia_repo, clase_repo, usuario_repo)
 
 def get_clase_service(
     clase_repo: clase_repo.ClaseRepository = Depends(get_clase_repo), 

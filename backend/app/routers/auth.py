@@ -36,4 +36,3 @@ def login(
         "rol": user.rol,
         "id": user.id  
     }
-  

@@ -57,3 +57,23 @@ verificar_maestro = crear_dependencia_auth("maestro")
 verificar_alumno = crear_dependencia_auth("alumno")
 verificar_maestro_o_alumno = crear_dependencia_auth(["maestro", "alumno"])
 
+
+def obtener_usuario_sin_rol(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar la credencial",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        matricula: str = payload.get("sub")
+        rol: str = payload.get("rol")
+        id: int = payload.get("id")
+        nombre: str = payload.get("nombre")
+        if matricula is None:
+            raise credentials_exception
+        usuario = {"matricula": matricula, "rol": rol, "id": id, "nombre": nombre}
+    except JWTError:
+        raise credentials_exception
+    return usuario
+

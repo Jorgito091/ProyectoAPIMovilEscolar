@@ -4,7 +4,7 @@ from app.middlewares.auth import obtener_usuario
 from app.schemas.tarea import TareaCreate, TareaOut, TareaUpdate
 from app.services.tarea_service import TareaService
 from app.dependencies import get_tarea_service
-from app.middlewares.auth import verificar_alumno, verificar_maestro, verificar_maestro_o_alumno
+from app.middlewares.auth import verificar_maestro, verificar_maestro_o_alumno
 
 router = APIRouter(prefix="/tareas", tags=["Tareas"])
 

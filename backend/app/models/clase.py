@@ -13,3 +13,4 @@ class Clase(Base):
     inscripciones = relationship("Inscripcion", back_populates="clase")
 
     tareas = relationship("Tarea", back_populates="clase")
+    asistencias = relationship("Asistencia", back_populates="clase")
