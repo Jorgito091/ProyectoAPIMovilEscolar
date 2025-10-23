@@ -27,7 +27,7 @@ struct EditarTareaView: View {
             } else {
                 Picker("Selecciona una materia", selection: $selectedClase) {
                     ForEach(clases, id: \.self) { clase in
-                        Text(clase.nombre).tag(clase as Clase?)
+                        Text(clase.nombre ?? "Clase \(clase.id)").tag(clase as Clase?)
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
@@ -103,7 +103,6 @@ struct EditarTareaView: View {
             }
         }
         .onChange(of: tareaSeleccionada) { tarea in
-            // Precarga los datos de la tarea seleccionada
             if let tarea = tarea {
                 nuevoTitulo = tarea.titulo
                 nuevaDescripcion = tarea.descripcion ?? ""
@@ -118,7 +117,6 @@ struct EditarTareaView: View {
         }
     }
 
-    // Cargar clases que imparte el maestro
     func cargarMateriasDeMaestro() {
         guard let url = URL(string: "http://127.0.0.1:8000/user/\(userID)") else {
             mensaje = "URL incorrecta para maestro"
@@ -144,7 +142,6 @@ struct EditarTareaView: View {
         }.resume()
     }
 
-    // Cargar tareas de la clase seleccionada
     func cargarTareas(claseID: Int) {
         isLoading = true
         mensaje = ""
@@ -182,7 +179,6 @@ struct EditarTareaView: View {
         }.resume()
     }
 
-    // Editar tarea
     func editarTarea() {
         guard let tarea = tareaSeleccionada else {
             mensaje = "Selecciona una tarea"

@@ -1,5 +1,6 @@
 import SwiftUI
 
+// Vista del alumno que muestra grupos y llama a VerTareasView
 struct AlView: View {
     let accessToken: String
     let userID: Int

@@ -10,7 +10,7 @@ struct VerTareasMaestroView: View {
     @State private var mensaje: String = ""
     @State private var isLoading = false
 
-    // Para sheet de detalle, editar, eliminar
+  
     @State private var tareaSeleccionada: TareaOut? = nil
     @State private var accion: AccionTarea? = nil
 
@@ -26,9 +26,11 @@ struct VerTareasMaestroView: View {
                 ProgressView("Cargando materias...")
                     .onAppear { cargarMateriasDeMaestro() }
             } else {
+                // Reemplaza el Picker problemático por este bloque:
                 Picker("Selecciona una materia", selection: $selectedClase) {
                     ForEach(clases, id: \.self) { clase in
-                        Text(clase.nombre).tag(clase as Clase?)
+                        Text(clase.nombre ?? "Clase \(clase.id)")
+                            .tag(Optional(clase)) // selection es Clase?
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
@@ -105,13 +107,12 @@ struct VerTareasMaestroView: View {
                 }
             case .eliminar:
                 if let tarea = tareaSeleccionada {
-                    EliminarTareaView(accessToken: accessToken, userID: userID, tareaID: tarea.id)
+                    EliminarTareaView(accessToken: accessToken, userID: userID)
                 }
             }
         }
     }
 
-    // Funciones de red (idénticas a tu ejemplo)
     func cargarMateriasDeMaestro() {
         guard let url = URL(string: "http://127.0.0.1:8000/user/\(userID)") else {
             mensaje = "URL incorrecta para maestro"
@@ -174,8 +175,4 @@ struct VerTareasMaestroView: View {
         }.resume()
     }
 }
-struct Maestro: Identifiable, Decodable {
-    let id: Int
-    let nombre: String
-    let clases_impartidas: [Clase]
-}
+

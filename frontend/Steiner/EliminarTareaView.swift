@@ -4,8 +4,6 @@ struct EliminarTareaView: View {
     let accessToken: String
     let userID: Int
     var onTareaEliminada: (() -> Void)? = nil
-    let tareaID: Int
-
 
     @State private var mostrarAlerta = false
     @State private var mensajeAlerta = ""
@@ -35,7 +33,7 @@ struct EliminarTareaView: View {
             } else {
                 Picker("Selecciona una materia", selection: $selectedClase) {
                     ForEach(clases, id: \.self) { clase in
-                        Text(clase.nombre).tag(clase as Clase?)
+                        Text(clase.nombre ?? "Clase \(clase.id)").tag(clase as Clase?)
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
@@ -107,7 +105,6 @@ struct EliminarTareaView: View {
         }
     }
 
-    // Cargar clases que imparte el maestro
     func cargarMateriasDeMaestro() {
         guard let url = URL(string: "http://127.0.0.1:8000/user/\(userID)") else {
             mensaje = "URL incorrecta para maestro"
@@ -133,7 +130,6 @@ struct EliminarTareaView: View {
         }.resume()
     }
 
-    // Cargar tareas de la clase seleccionada
     func cargarTareas(claseID: Int) {
         isLoading = true
         mensaje = ""
@@ -171,7 +167,6 @@ struct EliminarTareaView: View {
         }.resume()
     }
 
-    // Eliminar tarea con manejo de errores y alerta amigable
     func eliminarTarea(tareaId: Int) {
         isLoading = true
         mensaje = ""
@@ -206,21 +201,19 @@ struct EliminarTareaView: View {
                     tareas.removeAll(where: { $0.id == tareaId })
                     onTareaEliminada?()
                 } else if httpResponse.statusCode == 409 || httpResponse.statusCode == 400 {
-                   
                     if let data = data,
                         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                         let detail = json["detail"] as? String {
                         mensajeAlerta = detail
                     } else {
-                        mensajeAlerta = "No se puede eliminar esta tarea porque tiene entregas asociadas.\nY no hay presupuesto para pagar a sistemas asi que ni modo :C."
+                        mensajeAlerta = "No se puede eliminar esta tarea porque tiene entregas asociadas."
                     }
                     mostrarAlerta = true
                 } else {
-                    mensajeAlerta = "No se puede master , alguien ya subio y no hay presupuesto para eso , te me cuidas (\(httpResponse.statusCode))."
+                    mensajeAlerta = "Error: (\(httpResponse.statusCode))."
                     mostrarAlerta = true
                 }
             }
         }.resume()
     }
 }
-

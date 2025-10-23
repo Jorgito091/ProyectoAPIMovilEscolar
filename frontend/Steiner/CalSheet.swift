@@ -12,11 +12,9 @@ struct CalSheet: View {
     // URL base para el bucket "entregas" en tu proyecto Supabase
     let supabaseBaseURL = "https://bldhkjnpylapzlvvjmfp.supabase.co/storage/v1/object/public/entregas/"
     var archivoURL: URL? {
-        // Si el storage_path ya es una URL pública completa, úsala directa
         if entrega.storage_path.starts(with: "http") {
             return URL(string: entrega.storage_path)
         } else {
-            // Si es solo el path, arma la URL pública
             return URL(string: "\(supabaseBaseURL)\(entrega.storage_path)")
         }
     }
@@ -60,7 +58,6 @@ struct CalSheet: View {
         }
         .padding()
         .onAppear {
-            // Si ya existe calificación/comentario previa, precarga
             if let calif = entrega.calificacion {
                 calificacion = calif
             }

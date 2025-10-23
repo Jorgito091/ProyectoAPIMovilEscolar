@@ -1,14 +1,5 @@
 import SwiftUI
 
-struct Tarea: Decodable, Identifiable {
-    let id: Int
-    let clase_id: Int
-    let titulo: String
-    let descripcion: String?
-    let fecha_creacion: String
-    let fecha_limite: String
-}
-
 struct TareaItemView: View {
     let tarea: Tarea
     var onTap: (() -> Void)? = nil
@@ -79,5 +70,4 @@ struct TareaItemView: View {
         .background(beige.opacity(0.3))
         .cornerRadius(8)
     }
-    }
-
+}

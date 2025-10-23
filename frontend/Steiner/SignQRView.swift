@@ -1,23 +1,6 @@
 import SwiftUI
 import CodeScanner
 
-struct Alumno: Decodable {
-    let id: Int
-    let nombre: String
-}
-
-struct Clase: Identifiable, Decodable, Hashable {
-    let id: Int
-    let nombre: String
-}
-
-struct UsuarioDetalle: Decodable {
-    let id: Int
-    let nombre: String
-    let rol: String
-    let clases_impartidas: [Clase]?
-}
-
 struct SignQRView: View {
     let accessToken: String
     let userID: Int
@@ -96,7 +79,8 @@ struct SignQRView: View {
                             .foregroundColor(.secondary)
                         Picker("Clase", selection: $claseSeleccionada) {
                             ForEach(clases, id: \.self) { clase in
-                                Text(clase.nombre).tag(clase as Clase?)
+                           
+                                Text(clase.nombre ?? "Clase \(clase.id)").tag(clase as Clase?)
                             }
                         }
                         .pickerStyle(.wheel)
@@ -180,12 +164,10 @@ struct SignQRView: View {
         }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        print("Buscar alumno - URL:", url)
-        print("Buscar alumno - Token:", accessToken)
         URLSession.shared.dataTask(with: request) { data, _, _ in
             DispatchQueue.main.async {
                 if let data = data,
-                   let decoded = try? JSONDecoder().decode(Alumno.self, from: data) {
+                   let decoded = try? JSONDecoder().decode(UsuarioSimple.self, from: data) {
                     alumnoNombre = decoded.nombre
                 } else {
                     alumnoNombre = nil
@@ -203,8 +185,6 @@ struct SignQRView: View {
         }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        print("Cargar clases - URL:", url)
-        print("Cargar clases - Token:", accessToken)
         URLSession.shared.dataTask(with: request) { data, _, _ in
             DispatchQueue.main.async {
                 if let data = data,

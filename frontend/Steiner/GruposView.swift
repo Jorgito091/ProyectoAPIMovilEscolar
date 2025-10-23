@@ -1,9 +1,26 @@
 import SwiftUI
 
-struct Grupo: Decodable, Identifiable, Equatable , Hashable {
-    let id: Int
-    let nombre: String
-    let maestro_id: Int?
+struct GrupoItemView: View {
+    let grupo: Grupo
+    let cafe: Color
+    let cafeOscuro: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(grupo.nombre)
+                .font(.headline)
+                .foregroundColor(cafeOscuro)
+            Text("ID: \(grupo.id)")
+                .font(.subheadline)
+                .foregroundColor(cafe)
+            if let maestroID = grupo.maestro_id {
+                Text("Maestro ID: \(maestroID)")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(.vertical, 4)
+    }
 }
 
 struct GruposView: View {
@@ -85,28 +102,5 @@ struct GruposView: View {
                 }
             }
         }.resume()
-    }
-}
-
-struct GrupoItemView: View {
-    let grupo: Grupo
-    let cafe: Color
-    let cafeOscuro: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(grupo.nombre)
-                .font(.headline)
-                .foregroundColor(cafeOscuro)
-            Text("ID: \(grupo.id)")
-                .font(.subheadline)
-                .foregroundColor(cafe)
-            if let maestroID = grupo.maestro_id {
-                Text("Maestro ID: \(maestroID)")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-        }
-        .padding(.vertical, 4)
     }
 }

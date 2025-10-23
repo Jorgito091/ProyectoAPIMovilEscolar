@@ -1,4 +1,5 @@
 import SwiftUI
+
 struct CrearTareaView: View {
     let accessToken: String
     let userID: Int  // Necesario para cargar clases impartidas
@@ -36,7 +37,7 @@ struct CrearTareaView: View {
                         .padding(.horizontal)
                     Picker("Clase", selection: $claseSeleccionada) {
                         ForEach(clases, id: \.self) { clase in
-                            Text(clase.nombre).tag(clase as Clase?)
+                            Text(clase.nombre ?? "Clase \(clase.id)").tag(clase as Clase?)
                         }
                     }
                     .pickerStyle(.wheel)
