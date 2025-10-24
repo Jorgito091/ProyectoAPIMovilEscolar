@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
-from app.schemas.user import UsuarioCreate, UsuarioUpdate, UsuarioOut
+from app.schemas.user import ClaseSimple, UsuarioCreate, UsuarioUpdate, UsuarioOut
 from app.schemas.clase import ClaseOut, UsuarioSimple
 from app.services.user_service import UserService
 from app.dependencies import get_usuario_service
+from app.middlewares.auth import verificar_maestro_o_alumno
 
 router = APIRouter(prefix="/user", tags=["User"])
 
@@ -48,20 +49,11 @@ def actualizar_usuario(
         )
     return user_service.actualizar_user(user_id, data)
 
-@router.get("/{alumno_id}/clases", response_model=List[ClaseOut])
+@router.get("/{alumno_id}/clases", response_model=List[ClaseSimple])
 def obtener_clases_alumno(
     alumno_id: int,
-    user_service: UserService = Depends(get_usuario_service)
+    user_service: UserService = Depends(get_usuario_service),
+    userAuth: dict = Depends(verificar_maestro_o_alumno)
 ):
     clases = user_service.obtener_clases_por_alumno(alumno_id)
-    clases_out = []
-    for clase in clases:
-        alumnos = [UsuarioSimple.model_validate(insc.alumno) for insc in clase.inscripciones]
-        clase_out = ClaseOut(
-            id=clase.id,
-            nombre=clase.nombre,
-            maestro=UsuarioSimple.model_validate(clase.maestro),
-            alumnos_inscritos=alumnos
-        )
-        clases_out.append(clase_out)
-    return clases_out
+    return [ClaseSimple(id=clase.id, nombre=clase.nombre) for clase in clases]
