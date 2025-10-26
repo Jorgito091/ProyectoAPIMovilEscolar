@@ -113,7 +113,7 @@ struct AsisView: View {
 
     func iso8601String(from date: Date) -> String {
         let fmt = ISO8601DateFormatter()
-        fmt.formatOptions = [.withInternetDateTime] // evita fracciones para máxima compatibilidad
+        fmt.formatOptions = [.withInternetDateTime]
         return fmt.string(from: date)
     }
 
@@ -157,7 +157,7 @@ struct AsisView: View {
     func cargarAlumnos(claseId: Int) {
         isLoading = true
         mensaje = ""
-        guard let url = URL(string: "http://localhost:8000/clases/\(claseId)/alumnos") else {
+        guard let url = URL(string: "http://localhost:8000/clases/\(claseId)") else {
             mensaje = "URL incorrecta para alumnos"
             isLoading = false
             return

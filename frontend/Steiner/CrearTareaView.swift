@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CrearTareaView: View {
     let accessToken: String
-    let userID: Int  // Necesario para cargar clases impartidas
+    let userID: Int  
     var onTareaCreada: (() -> Void)? = nil
 
     @State private var titulo: String = ""

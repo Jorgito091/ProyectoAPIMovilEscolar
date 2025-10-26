@@ -49,7 +49,7 @@ struct MView: View {
 
                     Divider()
 
-                    // Sección dinámica
+     
                     Group {
                         switch selected {
                         case .ver:
