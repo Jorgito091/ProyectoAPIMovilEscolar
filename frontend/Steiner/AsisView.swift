@@ -164,7 +164,7 @@ struct AsisView: View {
         }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: request) { data, _, err in
+        URLSession.shared.dataTask(with: request) { data, response, err in
             DispatchQueue.main.async {
                 isLoading = false
                 if let err = err {
@@ -175,9 +175,18 @@ struct AsisView: View {
                     mensaje = "Sin datos de alumnos"
                     return
                 }
+
+                // Debug: imprimir status y body crudo si falla
+                if let http = response as? HTTPURLResponse {
+                    print("GET /clases/\(claseId) status:", http.statusCode)
+                }
+                if let s = String(data: data, encoding: .utf8) { print("RESP /clases/:", s) }
+
                 do {
-                    let alumnos = try JSONDecoder().decode([UsuarioSimple].self, from: data)
+                    let clase = try JSONDecoder().decode(Clase.self, from: data)
+                    let alumnos = clase.alumnos_inscritos ?? []
                     self.alumnosPorClase[claseId] = alumnos
+
                     var estado: [Int: Bool] = self.asistenciaEstado[claseId] ?? [:]
                     for a in alumnos {
                         if estado[a.id] == nil { estado[a.id] = false }
@@ -185,6 +194,7 @@ struct AsisView: View {
                     self.asistenciaEstado[claseId] = estado
                 } catch {
                     mensaje = "Error al decodificar alumnos: \(error.localizedDescription)"
+                    print("Decoding error:", error)
                 }
             }
         }.resume()
