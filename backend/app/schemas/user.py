@@ -26,6 +26,8 @@ class UsuarioOut(UsuarioBase):
     clases_impartidas: List[ClaseSimple] = []
 
     model_config = {"from_attributes": True}
+    
+    
 
 class UsuarioUpdate(BaseModel):
     nombre: Optional[str] = Field(None, example="Ana Soto")

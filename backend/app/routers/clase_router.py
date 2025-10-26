@@ -4,6 +4,7 @@ from app.schemas.clase import ClaseCreate, ClaseOut
 from app.services.clase_service import ClaseService
 from app.dependencies import get_clase_service
 from app.middlewares.auth import verificar_maestro
+from app.schemas.user import UsuarioOut
 
 router = APIRouter(prefix="/clases", tags=["Clases"])
 
@@ -18,3 +19,7 @@ def obtener_clase(clase_id: int, service: ClaseService = Depends(get_clase_servi
 @router.get("/", response_model=List[ClaseOut])
 def listar_clases(service: ClaseService = Depends(get_clase_service)):
     return service.obtener_todas()
+
+@router.get("/{clase_id}/alumnos",response_model=list[UsuarioOut])
+def obtener_alumnos_por_clase(clase_id:int ,service: ClaseService = Depends(get_clase_service)):
+    return service.obtener_alumno_por_clase(clase_id)

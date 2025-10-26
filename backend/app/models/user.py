@@ -15,4 +15,6 @@ class User(Base):
     entregas = relationship("Entrega", back_populates="alumno")
     clases_impartidas = relationship("Clase", back_populates="maestro")
     
-    asistencias = relationship("Asistencia", back_populates="alumno")
+    @property
+    def clases_inscritas(self):
+        return [inscripcion.clase for inscripcion in self.inscripciones]

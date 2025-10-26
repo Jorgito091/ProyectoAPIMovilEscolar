@@ -30,7 +30,15 @@ class UserRepository:
         return usuario
 
     def obtener_todos_por_rol(self, rol: str) -> list[User]:
-        return self.db.query(User).filter(User.rol == rol).all()
+        return (
+            self.db.query(User)
+            .options(
+                selectinload(User.clases_impartidas),
+                selectinload(User.inscripciones).selectinload(Inscripcion.clase)
+            )
+            .filter(User.rol == rol)
+            .all()
+        )
     
     def actualizar(self, usuario: User) -> User:
         self.db.commit()

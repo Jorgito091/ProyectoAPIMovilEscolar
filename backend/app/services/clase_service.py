@@ -32,7 +32,7 @@ class ClaseService:
     def obtener_todas(self) -> list[Clase]:
         return self.repo.obtener_todas()
 
-    def actualizar_Clase(self, Clase_id: int, data: ClaseUpdate):
+    def actualizar_clase(self, Clase_id: int, data: ClaseUpdate):
         """
         Actualiza los datos de un Clase.
         """
@@ -60,5 +60,8 @@ class ClaseService:
             )
         self.repo.eliminar(Clase)
         return {"mensaje": f"Clase {Clase_id} eliminado correctamente"}
+    
+    def obtener_alumno_por_clase(self,Clase_id:int):
+        return self.repo.obtener_alumnos_por_clase(Clase_id)
 
 
