@@ -98,4 +98,3 @@ class ClaseService:
         # Mapear a UsuarioOut (Pydantic v2: model_validate)
         alumnos_out = [UsuarioOut.model_validate(u) for u in alumnos]
         return alumnos_out
-        #Holapapusnopapus
