@@ -177,7 +177,7 @@ struct SignQRView: View {
         }.resume()
     }
 
-    // --- Cargar clases impartidas por el maestro usando /user/<userID> ---
+   
     func cargarClasesImpartidas() {
         guard let url = URL(string: "http://localhost:8000/user/\(userID)") else {
             mensaje = "URL de usuario incorrecta"
@@ -201,7 +201,7 @@ struct SignQRView: View {
         }.resume()
     }
 
-    // --- Inscribir ---
+
     func inscribirAlumno(alumno_id: Int, clase_id: Int) {
         mensaje = ""
         isLoading = true

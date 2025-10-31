@@ -1,13 +1,14 @@
 import SwiftUI
 
-// Vista de asistencias para el maestro
+
+
 struct AsisView: View {
     let accessToken: String
     let userID: Int
 
     @State private var clases: [Clase] = []
     @State private var alumnosPorClase: [Int: [UsuarioSimple]] = [:]
-    @State private var asistenciaEstado: [Int: [Int: Bool]] = [:] // [idClase: [idAlumno: present]]
+    @State private var asistenciaEstado: [Int: [Int: Bool]] = [:]
     @State private var selectedClaseId: Int? = nil
     @State private var selectedFecha: Date = Date()
     @State private var tema: String = ""
@@ -29,11 +30,7 @@ struct AsisView: View {
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundColor(.purple)
 
-            // Clase picker
-            Picker("Clase", selection: Binding(get: { selectedClaseId }, set: { newId in
-                selectedClaseId = newId
-                if let id = newId { cargarAlumnos(claseId: id) }
-            })) {
+            Picker("Clase", selection: $selectedClaseId) {
                 Text("Selecciona").tag(Optional<Int>(nil))
                 ForEach(clases) { c in
                     Text(c.nombre ?? "Clase \(c.id)").tag(Optional(c.id))
@@ -41,9 +38,20 @@ struct AsisView: View {
             }
             .pickerStyle(MenuPickerStyle())
             .padding(.horizontal)
+            .onChange(of: selectedClaseId) { newId in
+                if let id = newId {
+                    cargarAlumnos(claseId: id)
+                }
+            }
 
             DatePicker("Fecha", selection: $selectedFecha, displayedComponents: .date)
                 .padding(.horizontal)
+                .onChange(of: selectedFecha) { _ in
+                    print("📅 Fecha cambió a: \(dateOnlyString(from: selectedFecha))")
+                    if let claseId = selectedClaseId {
+                        cargarAsistenciasExistentes(claseId: claseId, fecha: selectedFecha)
+                    }
+                }
 
             TextField("Tema de la clase (opcional)", text: $tema)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -52,38 +60,47 @@ struct AsisView: View {
             if isLoading {
                 ProgressView("Cargando...")
             } else if !mensaje.isEmpty {
-                Text(mensaje).foregroundColor(.red).padding(.horizontal)
+                Text(mensaje)
+                    .foregroundColor(mensaje.contains("éxito") || mensaje.contains("pudo") || mensaje.contains("cargaron") ? .green : .red)
+                    .padding(.horizontal)
+                    .font(.caption)
             }
 
             if let claseId = selectedClaseId, let alumnos = alumnosPorClase[claseId] {
-                List(alumnos, id: \.id) { alumno in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(alumno.nombre).font(.headline)
-                            Text("ID: \(alumno.id)").font(.caption).foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        Button {
-                            marcarPresente(claseId: claseId, alumnoId: alumno.id, presente: true)
-                        } label: {
-                            Image(systemName: asistenciaEstado[claseId]?[alumno.id] == true ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(.green)
-                                .font(.title2)
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(alumnos, id: \.id) { alumno in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(alumno.nombre).font(.headline)
+                                    Text("ID: \(alumno.id)").font(.caption).foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Button {
+                                    marcarPresente(claseId: claseId, alumnoId: alumno.id, presente: true)
+                                } label: {
+                                    Image(systemName: asistenciaEstado[claseId]?[alumno.id] == true ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(.green)
+                                        .font(.title2)
+                                }
+                                .buttonStyle(BorderlessButtonStyle())
 
-                        Button {
-                            marcarPresente(claseId: claseId, alumnoId: alumno.id, presente: false)
-                        } label: {
-                            Image(systemName: asistenciaEstado[claseId]?[alumno.id] == false ? "xmark.circle.fill" : "circle")
-                                .foregroundColor(.red)
-                                .font(.title2)
+                                Button {
+                                    marcarPresente(claseId: claseId, alumnoId: alumno.id, presente: false)
+                                } label: {
+                                    Image(systemName: asistenciaEstado[claseId]?[alumno.id] == false ? "xmark.circle.fill" : "circle")
+                                        .foregroundColor(.red)
+                                        .font(.title2)
+                                }
+                                .buttonStyle(BorderlessButtonStyle())
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
                         }
-                        .buttonStyle(BorderlessButtonStyle())
                     }
-                    .padding(.vertical, 6)
+                    .padding(.horizontal)
                 }
-                .listStyle(InsetGroupedListStyle())
                 .frame(maxHeight: 350)
             } else {
                 Text("Selecciona una clase para ver alumnos.")
@@ -98,22 +115,27 @@ struct AsisView: View {
                     .bold()
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.purple)
+                    .background(selectedClaseId == nil ? Color.gray : Color.purple)
                     .foregroundColor(.white)
                     .cornerRadius(8)
                     .padding(.horizontal)
             }
+            .disabled(selectedClaseId == nil)
 
             Spacer()
         }
         .onAppear(perform: cargarClases)
     }
 
-    // MARK: - Helpers / Networking
-
     func iso8601String(from date: Date) -> String {
         let fmt = ISO8601DateFormatter()
         fmt.formatOptions = [.withInternetDateTime]
+        return fmt.string(from: date)
+    }
+    
+    func dateOnlyString(from date: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
         return fmt.string(from: date)
     }
 
@@ -140,11 +162,11 @@ struct AsisView: View {
                 }
                 do {
                     self.clases = try JSONDecoder().decode([Clase].self, from: data)
-                    if self.clases.isEmpty { self.mensaje = "No hay clases." }
-                    else {
+                    if self.clases.isEmpty {
+                        self.mensaje = "No hay clases."
+                    } else {
                         if self.selectedClaseId == nil {
                             self.selectedClaseId = self.clases.first?.id
-                            if let id = self.selectedClaseId { cargarAlumnos(claseId: id) }
                         }
                     }
                 } catch {
@@ -155,18 +177,15 @@ struct AsisView: View {
     }
 
     func cargarAlumnos(claseId: Int) {
-        isLoading = true
-        mensaje = ""
+        print("🔄 Cargando alumnos para clase \(claseId)")
         guard let url = URL(string: "http://localhost:8000/clases/\(claseId)") else {
             mensaje = "URL incorrecta para alumnos"
-            isLoading = false
             return
         }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         URLSession.shared.dataTask(with: request) { data, response, err in
             DispatchQueue.main.async {
-                isLoading = false
                 if let err = err {
                     mensaje = "Error cargando alumnos: \(err.localizedDescription)"
                     return
@@ -176,25 +195,98 @@ struct AsisView: View {
                     return
                 }
 
-                // Debug: imprimir status y body crudo si falla
-                if let http = response as? HTTPURLResponse {
-                    print("GET /clases/\(claseId) status:", http.statusCode)
-                }
-                if let s = String(data: data, encoding: .utf8) { print("RESP /clases/:", s) }
-
                 do {
                     let clase = try JSONDecoder().decode(Clase.self, from: data)
                     let alumnos = clase.alumnos_inscritos ?? []
                     self.alumnosPorClase[claseId] = alumnos
+                    print("✅ Cargados \(alumnos.count) alumnos")
 
-                    var estado: [Int: Bool] = self.asistenciaEstado[claseId] ?? [:]
+                    // Inicializar todos como ausentes
+                    var estado: [Int: Bool] = [:]
                     for a in alumnos {
-                        if estado[a.id] == nil { estado[a.id] = false }
+                        estado[a.id] = false
                     }
                     self.asistenciaEstado[claseId] = estado
+                    
+                    // Cargar asistencias existentes
+                    self.cargarAsistenciasExistentes(claseId: claseId, fecha: self.selectedFecha)
                 } catch {
                     mensaje = "Error al decodificar alumnos: \(error.localizedDescription)"
-                    print("Decoding error:", error)
+                    print("❌ Decoding error:", error)
+                }
+            }
+        }.resume()
+    }
+
+    func cargarAsistenciasExistentes(claseId: Int, fecha: Date) {
+        let fechaBuscada = dateOnlyString(from: fecha)
+        print("🔍 Buscando asistencias para clase \(claseId) fecha \(fechaBuscada)")
+        
+        guard let url = URL(string: "http://localhost:8000/asistencias/clase/\(claseId)") else {
+            print("❌ URL inválida")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, response, err in
+            DispatchQueue.main.async {
+                if let err = err {
+                    print("❌ Error cargando asistencias: \(err.localizedDescription)")
+                    return
+                }
+                
+                guard let data = data else {
+                    print("❌ Sin datos")
+                    return
+                }
+                
+                do {
+                    let asistencias = try JSONDecoder().decode([AsistenciaOut].self, from: data)
+                    print("📚 Total asistencias de la clase: \(asistencias.count)")
+                    
+                    // Filtrar asistencias por la fecha seleccionada
+                    let asistenciasDia = asistencias.filter { asistencia in
+                        asistencia.fecha_clase.starts(with: fechaBuscada)
+                    }
+                    
+                    print("📅 Asistencias para \(fechaBuscada): \(asistenciasDia.count)")
+                    
+                    // Actualizar tema
+                    if let primeraAsistencia = asistenciasDia.first {
+                        self.tema = primeraAsistencia.tema
+                        print("📝 Tema cargado: \(primeraAsistencia.tema)")
+                    } else {
+                        self.tema = ""
+                    }
+                    
+                    // Actualizar estado
+                    var estado = self.asistenciaEstado[claseId] ?? [:]
+                    
+                    // Reset a todos como ausentes
+                    if let alumnos = alumnosPorClase[claseId] {
+                        for alumno in alumnos {
+                            estado[alumno.id] = false
+                        }
+                    }
+                    
+                    // Marcar presentes
+                    for asistencia in asistenciasDia {
+                        estado[asistencia.id_alumno] = true
+                        print("✅ Alumno \(asistencia.id_alumno) marcado presente")
+                    }
+                    
+                    self.asistenciaEstado[claseId] = estado
+                    
+                    if !asistenciasDia.isEmpty {
+                        self.mensaje = "✅ Se cargaron \(asistenciasDia.count) asistencias"
+                    } else {
+                        self.mensaje = "Sin registros para esta fecha"
+                    }
+                    
+                } catch {
+                    print("❌ Error decodificando: \(error)")
                 }
             }
         }.resume()
@@ -204,6 +296,7 @@ struct AsisView: View {
         var estado = asistenciaEstado[claseId] ?? [:]
         estado[alumnoId] = presente
         asistenciaEstado[claseId] = estado
+        print("👤 Alumno \(alumnoId): \(presente ? "Presente" : "Ausente")")
     }
 
     func guardarAsistencias() {
@@ -220,7 +313,7 @@ struct AsisView: View {
         mensaje = ""
 
         let fechaStr = iso8601String(from: selectedFecha)
-        let temaFinal = tema.isEmpty ? "Clase \(fechaStr)" : tema
+        let temaFinal = tema.isEmpty ? "Clase \(dateOnlyString(from: selectedFecha))" : tema
 
         let alumnosPresentes = alumnos.filter { asistenciaEstado[claseId]?[$0.id] == true }
 
@@ -236,7 +329,7 @@ struct AsisView: View {
         for alumno in alumnosPresentes {
             group.enter()
             guard let url = URL(string: "http://localhost:8000/asistencias/") else {
-                errores.append("URL inválida para crear asistencia")
+                errores.append("URL inválida")
                 group.leave()
                 continue
             }
@@ -257,12 +350,9 @@ struct AsisView: View {
                 DispatchQueue.main.async {
                     if let error = error {
                         errores.append("Alumno \(alumno.nombre): \(error.localizedDescription)")
-                        group.leave()
-                        return
-                    }
-                    if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                    } else if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                         let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-                        errores.append("Alumno \(alumno.nombre): status \(http.statusCode) - \(body)")
+                        errores.append("Alumno \(alumno.nombre): status \(http.statusCode)")
                     }
                     group.leave()
                 }
@@ -272,9 +362,9 @@ struct AsisView: View {
         group.notify(queue: .main) {
             isLoading = false
             if errores.isEmpty {
-                mensaje = "Asistencias guardadas correctamente"
+                mensaje = "✅ Asistencias guardadas con éxito"
             } else {
-                mensaje = "Algunas asistencias fallaron:\n" + errores.joined(separator: "\n")
+                mensaje = "⚠️ Algunas asistencias fallaron"
             }
         }
     }
