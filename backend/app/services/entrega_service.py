@@ -11,17 +11,17 @@ class EntregaService:
         self.tarea_repo = tarea_repo
         self.usuario_repo = usuario_repo
 
-    def crear_entrega(self, alumno_id: int, tarea_id: int, data: EntregaCreate) -> Entrega:
+    def crear_entrega(self, usuario_id: int, tarea_id: int, data: EntregaCreate) -> Entrega:
         tarea = self.tarea_repo.obtener_por_id(tarea_id)
         if not tarea:
             raise HTTPException(status_code=404, detail="La tarea no existe.")
 
-        alumno = self.usuario_repo.obtener_por_id(alumno_id)
-        if not alumno:
-            raise HTTPException(status_code=404, detail="El alumno no existe.")
-            
+        usuario = self.usuario_repo.obtener_por_id(usuario_id)
+        if not usuario:
+            raise HTTPException(status_code=404, detail="El usuario no existe.")
+        
         nueva_entrega = Entrega(
-            alumno_id=alumno_id,
+            alumno_id=usuario.id,
             tarea_id=tarea_id,
             storage_path=data.storage_path
         )

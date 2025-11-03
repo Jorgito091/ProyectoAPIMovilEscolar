@@ -27,5 +27,4 @@ class ClaseRepository:
         self.db.commit()
 
     def obtener_alumnos_por_clase(self, clase_id: int) -> list[User]:
-        # Consulta para obtener solo la lista de alumnos de una clase específica
         return self.db.query(User).join(Inscripcion).filter(Inscripcion.clase_id == clase_id).all()

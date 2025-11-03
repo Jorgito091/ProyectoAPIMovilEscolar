@@ -19,3 +19,9 @@ class AsistenciaOut(AsistenciaBase):
     id_alumno: int
 
     model_config = {"from_attributes": True}
+
+class AsistenciaOutWithUsers(AsistenciaBase):
+    nombre: str
+    clase: str
+    
+    model_config = {"from_attributes": True}

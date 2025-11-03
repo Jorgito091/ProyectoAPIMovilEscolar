@@ -1,5 +1,7 @@
 import SwiftUI
 import CodeScanner
+import PDFKit
+import UIKit
 
 struct SignQRView: View {
     let accessToken: String
@@ -23,11 +25,10 @@ struct SignQRView: View {
 
     @State private var selectedMode: Mode = .inscribir
 
-    // Sheets / navegaciones
+
     @State private var showAsisSheet = false
     @State private var showCalTareaSheet = false
-    
-    // NUEVO: Para calificar directamente desde QR
+
     @State private var showCalificarDirecto = false
     @State private var entregaCreada: Entrega? = nil
 
@@ -446,15 +447,80 @@ struct SignQRView: View {
         }.resume()
     }
     
-    // NUEVO: Crear una entrega temporal "Revisada en clase" y abrir para calificar
+    // NUEVO: Crear PDF con el texto "Revisada en clase"
+    func crearPDFRevisionEnClase() -> Data? {
+        let pdfMetaData = [
+            kCGPDFContextCreator: "Sistema de Calificaciones",
+            kCGPDFContextTitle: "Revisión en Clase"
+        ]
+        let format = UIGraphicsPDFRendererFormat()
+        format.documentInfo = pdfMetaData as [String: Any]
+        
+        // Tamaño carta
+        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let renderer = UIGraphicsPDFRenderer(bounds: pageRect, format: format)
+        
+        let data = renderer.pdfData { context in
+            context.beginPage()
+            
+            let titleFont = UIFont.boldSystemFont(ofSize: 24)
+            let bodyFont = UIFont.systemFont(ofSize: 16)
+            
+            // Título
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: titleFont,
+                .foregroundColor: UIColor.black
+            ]
+            let titulo = "REVISIÓN EN CLASE"
+            let titleSize = titulo.size(withAttributes: titleAttributes)
+            let titleRect = CGRect(
+                x: (pageRect.width - titleSize.width) / 2,
+                y: 100,
+                width: titleSize.width,
+                height: titleSize.height
+            )
+            titulo.draw(in: titleRect, withAttributes: titleAttributes)
+            
+            // Contenido
+            let bodyAttributes: [NSAttributedString.Key: Any] = [
+                .font: bodyFont,
+                .foregroundColor: UIColor.darkGray
+            ]
+            
+            let fecha = Date()
+            let formatter = DateFormatter()
+            formatter.dateStyle = .long
+            formatter.timeStyle = .short
+            formatter.locale = Locale(identifier: "es_MX")
+            
+            let contenido = """
+            
+            Esta tarea fue revisada presencialmente en clase.
+            
+            No se requirió entrega física del documento.
+            
+            Fecha de revisión: \(formatter.string(from: fecha))
+            
+            El profesor realizará la calificación correspondiente
+            basándose en la revisión realizada en el aula.
+            """
+            
+            let textRect = CGRect(x: 60, y: 200, width: pageRect.width - 120, height: pageRect.height - 300)
+            contenido.draw(in: textRect, withAttributes: bodyAttributes)
+        }
+        
+        return data
+    }
+    
+    // NUEVO: Crear una entrega con PDF "Revisada en clase" y abrir para calificar
+    // Cambiado: ahora incluye alumno_id en el multipart para que la entrega se registre como del alumno escaneado.
     func crearEntregaYCalificar(alumno_id: Int, tarea_id: Int) {
         mensaje = ""
         isLoading = true
         
-        // Crear un "archivo" temporal que sea texto plano indicando revisión en clase
-        let comentario = "Revisada en clase - Sin entrega física"
-        guard let comentarioData = comentario.data(using: .utf8) else {
-            mensaje = "Error al preparar datos"
+        // Crear el PDF
+        guard let pdfData = crearPDFRevisionEnClase() else {
+            mensaje = "Error al crear el PDF"
             isLoading = false
             return
         }
@@ -463,11 +529,21 @@ struct SignQRView: View {
         var body = Data()
         let boundaryPrefix = "--\(boundary)\r\n"
 
-        // Crear un archivo de texto plano temporal
+        // Agregar campo alumno_id para que la entrega se registre para ese alumno
         body.append(boundaryPrefix.data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"revision_en_clase.txt\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: text/plain\r\n\r\n".data(using: .utf8)!)
-        body.append(comentarioData)
+        body.append("Content-Disposition: form-data; name=\"alumno_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(alumno_id)\r\n".data(using: .utf8)!)
+
+        // (Opcional) agregar campo que indique que es revisión en clase
+        body.append(boundaryPrefix.data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"nota\"\r\n\r\n".data(using: .utf8)!)
+        body.append("Revisada en clase\r\n".data(using: .utf8)!)
+
+        // Crear el archivo PDF
+        body.append(boundaryPrefix.data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"revision_en_clase.pdf\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: application/pdf\r\n\r\n".data(using: .utf8)!)
+        body.append(pdfData)
         body.append("\r\n".data(using: .utf8)!)
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
@@ -535,8 +611,8 @@ struct SignQRView: View {
                 }
                 do {
                     let todasEntregas = try JSONDecoder().decode([Entrega].self, from: data)
-                    // Buscar la entrega del alumno
-                    if let entrega = todasEntregas.first(where: { $0.alumno.id == alumno_id }) {
+                    // Buscar la entrega del alumno (la más reciente si hay varias)
+                    if let entrega = todasEntregas.filter({ $0.alumno.id == alumno_id }).last {
                         entregaCreada = entrega
                         showCalificarDirecto = true
                     } else {

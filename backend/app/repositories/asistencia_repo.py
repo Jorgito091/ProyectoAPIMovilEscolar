@@ -1,7 +1,10 @@
+from datetime import date, datetime
+from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 from app.models.asistencia import Asistencia
 from app.models.clase import Clase
 from app.models.user import User
+from app.schemas.asistencia import AsistenciaOut
 
 class AsistenciaRepository:
     def __init__(self, db: Session):
@@ -45,6 +48,14 @@ class AsistenciaRepository:
             Asistencia.id_alumno == alumno_id,
             Asistencia.id_clase == clase_id
         ).all()
+    
+    def obtener_por_fecha(self, fecha: datetime) -> list[Asistencia]:
+        return (
+            self.db.query(Asistencia) \
+                .options(selectinload(Asistencia.alumno), selectinload(Asistencia.clase)) \
+                .filter(func.date(Asistencia.fecha_clase) == fecha.date()) \
+                .all()
+        )
 
     def eliminar(self, asistencia: Asistencia):
         self.db.delete(asistencia)

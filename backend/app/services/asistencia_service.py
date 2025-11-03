@@ -1,10 +1,12 @@
+from datetime import datetime
 from fastapi import HTTPException, status
 from app.repositories.asistencia_repo import AsistenciaRepository
 from app.repositories.clase_repo import ClaseRepository
 from app.repositories.user_repo import UserRepository
 from app.models.asistencia import Asistencia
-from app.schemas.asistencia import AsistenciaCreate, AsistenciaUpdate
-
+from app.schemas.user import UsuarioOut
+from app.schemas.asistencia import AsistenciaCreate, AsistenciaOut, AsistenciaOutWithUsers, AsistenciaUpdate
+""" from app.models import asistencia Se quito por que no se usa """
 class AsistenciaService:
     """
     Clase de servicio para manejar la lógica de negocio de las Asistencias.
@@ -60,3 +62,28 @@ class AsistenciaService:
                 detail="El alumno especificado no existe o no tiene el rol correcto."
             )
         return self.repo.obtener_por_alumno_y_clase(id_alumno, id_clase)
+    
+    def obtener_alumno_dependiendo_el_dia(self,fecha:datetime,id:int):
+        
+        hoy = datetime.now().date()
+        asistencias = self.repo.obtener_por_fecha(fecha)
+        
+        if(fecha.date() == hoy):
+            alumnos = self.clase_repo.obtener_alumnos_por_clase(id)
+            return [UsuarioOut.model_validate(a,from_attributes=True) for a in alumnos]
+
+        if not asistencias:
+            return []
+        
+        return [
+                AsistenciaOutWithUsers.model_validate({
+                    "id": a.id,
+                    "fecha_clase": a.fecha_clase,
+                    "tema": a.tema,
+                    "id_clase": a.id_clase,
+                    "id_alumno": a.id_alumno,
+                    "nombre": a.alumno.nombre,
+                    "clase": a.clase.nombre    
+                })
+                for a in asistencias
+            ]
