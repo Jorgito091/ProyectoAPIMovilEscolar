@@ -1,7 +1,6 @@
 import SwiftUI
 import CodeScanner
 
-
 struct SignQRView: View {
     let accessToken: String
     let userID: Int
@@ -19,7 +18,7 @@ struct SignQRView: View {
     @State private var tareas: [TareaOut] = []
     @State private var tareaSeleccionadaId: Int? = nil
 
-    // Fecha seleccionada para asistencia (ahora configurable)
+    // Fecha seleccionada para asistencia
     @State private var fechaSeleccionada: Date = Date()
 
     @State private var selectedMode: Mode = .inscribir
@@ -27,6 +26,10 @@ struct SignQRView: View {
     // Sheets / navegaciones
     @State private var showAsisSheet = false
     @State private var showCalTareaSheet = false
+    
+    // NUEVO: Para calificar directamente desde QR
+    @State private var showCalificarDirecto = false
+    @State private var entregaCreada: Entrega? = nil
 
     @Environment(\.dismiss) var dismiss
 
@@ -34,6 +37,7 @@ struct SignQRView: View {
         case inscribir
         case asistencia
         case revisar
+        case calificar // Modo para revisar y calificar en clase
 
         var id: String { self.rawValue }
         var title: String {
@@ -41,6 +45,7 @@ struct SignQRView: View {
             case .inscribir: return "Inscribir"
             case .asistencia: return "Asistencia"
             case .revisar: return "Revisar"
+            case .calificar: return "Calificar"
             }
         }
     }
@@ -184,37 +189,74 @@ struct SignQRView: View {
 
                         case .revisar:
                             VStack(spacing: 10) {
-                                if tareas.isEmpty {
+                                if clases.isEmpty {
+                                    ProgressView("Cargando clases...")
+                                } else if tareas.isEmpty {
                                     ProgressView("Cargando tareas...")
                                 } else {
-                                    Text("Selecciona tarea").font(.subheadline)
+                                    Text("Selecciona clase y tarea").font(.subheadline)
+                                    Picker("Clase", selection: $claseSeleccionada) {
+                                        ForEach(clases, id: \.self) { c in
+                                            Text(c.nombre ?? "Clase \(c.id)").tag(c as Clase?)
+                                        }
+                                    }
+                                    .pickerStyle(WheelPickerStyle())
+                                    .frame(height: 100)
+                                    
                                     Picker("Tarea", selection: $tareaSeleccionadaId) {
                                         ForEach(tareas) { t in
                                             Text(t.titulo).tag(Optional(t.id))
                                         }
                                     }
                                     .pickerStyle(WheelPickerStyle())
-                                    .frame(height: 120)
+                                    .frame(height: 100)
 
-                                    HStack(spacing: 10) {
-                                        Button("Marcar revisada") {
-                                            guard let tarea = tareaSeleccionada else {
-                                                mensaje = "Selecciona una tarea."
-                                                return
-                                            }
-                                            marcarTareaRevisada(alumno_id: alumnoId, assignment_id: tarea.id)
+                                    Button("Abrir calificar") {
+                                        guard tareaSeleccionada != nil else {
+                                            mensaje = "Selecciona una tarea."
+                                            return
                                         }
-                                        .buttonStyle(ActionButtonStyle(background: .mint))
-
-                                        Button("Abrir calificar") {
-                                            guard tareaSeleccionada != nil else {
-                                                mensaje = "Selecciona una tarea."
-                                                return
-                                            }
-                                            showCalTareaSheet = true
-                                        }
-                                        .buttonStyle(ActionButtonStyle(background: .blue))
+                                        showCalTareaSheet = true
                                     }
+                                    .buttonStyle(ActionButtonStyle(background: .blue))
+                                }
+                            }
+                            .padding(.horizontal)
+                            
+                        case .calificar:
+                            VStack(spacing: 10) {
+                                if clases.isEmpty {
+                                    ProgressView("Cargando clases...")
+                                } else if tareas.isEmpty {
+                                    ProgressView("Cargando tareas...")
+                                } else {
+                                    Text("Revisar y calificar en clase").font(.subheadline)
+                                    
+                                    Picker("Clase", selection: $claseSeleccionada) {
+                                        ForEach(clases, id: \.self) { c in
+                                            Text(c.nombre ?? "Clase \(c.id)").tag(c as Clase?)
+                                        }
+                                    }
+                                    .pickerStyle(WheelPickerStyle())
+                                    .frame(height: 100)
+                                    
+                                    Picker("Tarea", selection: $tareaSeleccionadaId) {
+                                        ForEach(tareas) { t in
+                                            Text(t.titulo).tag(Optional(t.id))
+                                        }
+                                    }
+                                    .pickerStyle(WheelPickerStyle())
+                                    .frame(height: 100)
+
+                                    Button("Revisar y Calificar") {
+                                        guard let tarea = tareaSeleccionada else {
+                                            mensaje = "Selecciona una tarea."
+                                            return
+                                        }
+                                        // Crear entrega temporal y abrir para calificar
+                                        crearEntregaYCalificar(alumno_id: alumnoId, tarea_id: tarea.id)
+                                    }
+                                    .buttonStyle(ActionButtonStyle(background: .indigo))
                                 }
                             }
                             .padding(.horizontal)
@@ -225,9 +267,22 @@ struct SignQRView: View {
                     alumnoNombre = nil
                     buscarAlumno(id: alumnoId)
                     cargarClasesImpartidas()
-                    if selectedMode == .revisar { cargarTareasParaProfesor() }
                 }
-            } // if alumno
+                .onChange(of: selectedMode) { newMode in
+                    if newMode == .revisar || newMode == .calificar {
+                        if let clase = claseSeleccionada {
+                            cargarTareasPorClase(claseID: clase.id)
+                        }
+                    }
+                }
+                .onChange(of: claseSeleccionada) { nuevaClase in
+                    if selectedMode == .revisar || selectedMode == .calificar {
+                        if let clase = nuevaClase {
+                            cargarTareasPorClase(claseID: clase.id)
+                        }
+                    }
+                }
+            }
 
             if isLoading {
                 ProgressView().padding()
@@ -253,6 +308,22 @@ struct SignQRView: View {
                 Text("No se seleccionó tarea")
             }
         }
+        .sheet(isPresented: $showCalificarDirecto) {
+            if let entrega = entregaCreada {
+                CalSheet(
+                    accessToken: accessToken,
+                    entrega: entrega,
+                    onCalificar: { calif, comentarios in
+                        actualizarEntrega(entregaId: entrega.id, calificacion: calif, comentarios: comentarios)
+                    }
+                )
+            } else {
+                VStack(spacing: 20) {
+                    ProgressView("Creando entrega...")
+                }
+                .padding()
+            }
+        }
     }
 
     // MARK: - Escaneo
@@ -275,9 +346,7 @@ struct SignQRView: View {
                 alumnoIdEscaneado = aid
                 alumnoNombre = nil
                 mensaje = ""
-                // cargamos datos relevantes
                 cargarClasesImpartidas()
-                if selectedMode == .revisar { cargarTareasParaProfesor() }
             } else {
                 mensaje = "QR inválido o incompleto"
                 alumnoIdEscaneado = nil
@@ -326,53 +395,190 @@ struct SignQRView: View {
                     self.clases = clasesImpartidas
                     if let first = clasesImpartidas.first, claseSeleccionada == nil {
                         claseSeleccionada = first
+                        // Si estamos en modo revisar o calificar, cargamos las tareas
+                        if selectedMode == .revisar || selectedMode == .calificar {
+                            cargarTareasPorClase(claseID: first.id)
+                        }
                     }
                 }
             }
         }.resume()
     }
 
-    func cargarTareasParaProfesor() {
-        guard let url = URL(string: "http://localhost:8000/tareas/profesor/\(userID)") else {
-            mensaje = "URL de tareas incorrecta"
+    func cargarTareasPorClase(claseID: Int) {
+        isLoading = true
+        mensaje = ""
+        tareas = []
+        guard let url = URL(string: "http://localhost:8000/tareas/clase/\(claseID)") else {
+            mensaje = "URL incorrecta"
+            isLoading = false
             return
         }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        isLoading = true
-        URLSession.shared.dataTask(with: request) { data, _, _ in
+        URLSession.shared.dataTask(with: request) { data, _, err in
             DispatchQueue.main.async {
                 isLoading = false
+                if let err = err {
+                    mensaje = "Error: \(err.localizedDescription)"
+                    tareas = []
+                    return
+                }
                 guard let data = data else {
-                    self.tareas = []
-                    mensaje = "No se pudieron cargar tareas"
+                    mensaje = "Sin datos"
+                    tareas = []
                     return
                 }
                 do {
-                    // Intento decodificar directamente a [TareaOut]
-                    let decoded = try JSONDecoder().decode([TareaOut].self, from: data)
-                    self.tareas = decoded
-                    if let first = decoded.first, tareaSeleccionadaId == nil {
+                    tareas = try JSONDecoder().decode([TareaOut].self, from: data)
+                    if let first = tareas.first, tareaSeleccionadaId == nil {
                         tareaSeleccionadaId = first.id
                     }
+                    if tareas.isEmpty {
+                        mensaje = "No hay tareas para esta clase."
+                    }
                 } catch {
-                    // Debug: mostrar JSON crudo en consola para ajustar si la respuesta tiene envoltorio
-                    if let raw = String(data: data, encoding: .utf8) {
-                        print("Error decodificando tareas: \(error). JSON crudo: \(raw)")
+                    print("Error decodificando tareas: \(error)")
+                    mensaje = "Error al decodificar las tareas"
+                    tareas = []
+                }
+            }
+        }.resume()
+    }
+    
+    // NUEVO: Crear una entrega temporal "Revisada en clase" y abrir para calificar
+    func crearEntregaYCalificar(alumno_id: Int, tarea_id: Int) {
+        mensaje = ""
+        isLoading = true
+        
+        // Crear un "archivo" temporal que sea texto plano indicando revisión en clase
+        let comentario = "Revisada en clase - Sin entrega física"
+        guard let comentarioData = comentario.data(using: .utf8) else {
+            mensaje = "Error al preparar datos"
+            isLoading = false
+            return
+        }
+        
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+        let boundaryPrefix = "--\(boundary)\r\n"
+
+        // Crear un archivo de texto plano temporal
+        body.append(boundaryPrefix.data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"revision_en_clase.txt\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: text/plain\r\n\r\n".data(using: .utf8)!)
+        body.append(comentarioData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        guard let url = URL(string: "http://localhost:8000/entregas/tarea/\(tarea_id)") else {
+            mensaje = "URL incorrecta"
+            isLoading = false
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
+        request.timeoutInterval = 30
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                isLoading = false
+                if let error = error {
+                    mensaje = "Error al crear entrega: \(error.localizedDescription)"
+                    return
+                }
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    mensaje = "Sin respuesta del servidor"
+                    return
+                }
+
+                if httpResponse.statusCode == 201 {
+                    mensaje = "Entrega creada, cargando para calificar..."
+                    // Ahora buscar la entrega recién creada
+                    cargarEntregaParaCalificar(alumno_id: alumno_id, tarea_id: tarea_id)
+                } else {
+                    if let data = data, let serverMsg = String(data: data, encoding: .utf8) {
+                        mensaje = "Error (\(httpResponse.statusCode)): \(serverMsg)"
                     } else {
-                        print("Error decodificando tareas: \(error). No se pudo leer body.")
+                        mensaje = "Error: Código \(httpResponse.statusCode)"
                     }
-                    // Intenta decodificar si el backend devuelve { \"results\": [...] } u otro wrapper
-                    if let wrapper = try? JSONDecoder().decode([String: [TareaOut]].self, from: data),
-                       let arr = wrapper.values.first {
-                        self.tareas = arr
-                        if let first = arr.first, tareaSeleccionadaId == nil {
-                            tareaSeleccionadaId = first.id
-                        }
+                }
+            }
+        }.resume()
+    }
+    
+    // Cargar la entrega específica del alumno para calificar
+    func cargarEntregaParaCalificar(alumno_id: Int, tarea_id: Int) {
+        isLoading = true
+        guard let url = URL(string: "http://localhost:8000/entregas/tarea/\(tarea_id)") else {
+            mensaje = "URL incorrecta"
+            isLoading = false
+            return
+        }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { data, _, err in
+            DispatchQueue.main.async {
+                isLoading = false
+                if let err = err {
+                    mensaje = "Error: \(err.localizedDescription)"
+                    return
+                }
+                guard let data = data else {
+                    mensaje = "Sin datos"
+                    return
+                }
+                do {
+                    let todasEntregas = try JSONDecoder().decode([Entrega].self, from: data)
+                    // Buscar la entrega del alumno
+                    if let entrega = todasEntregas.first(where: { $0.alumno.id == alumno_id }) {
+                        entregaCreada = entrega
+                        showCalificarDirecto = true
                     } else {
-                        self.tareas = []
-                        mensaje = "No se pudieron cargar tareas (ver consola)"
+                        mensaje = "No se encontró entrega del alumno"
                     }
+                } catch {
+                    mensaje = "Error al decodificar entregas: \(error.localizedDescription)"
+                }
+            }
+        }.resume()
+    }
+    
+    // Actualizar calificación de una entrega
+    func actualizarEntrega(entregaId: Int, calificacion: Float, comentarios: String) {
+        guard let url = URL(string: "http://localhost:8000/entregas/\(entregaId)") else {
+            mensaje = "URL incorrecta"
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        let json: [String: Any] = [
+            "calificacion": calificacion,
+            "comentarios": comentarios
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: json)
+        
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    mensaje = "Error al calificar: \(error.localizedDescription)"
+                    return
+                }
+                if let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) {
+                    mensaje = "Calificación guardada con éxito"
+                    showCalificarDirecto = false
+                    alumnoIdEscaneado = nil
+                    alumnoNombre = nil
+                    entregaCreada = nil
+                } else {
+                    mensaje = "Error al guardar calificación"
                 }
             }
         }.resume()
@@ -414,7 +620,6 @@ struct SignQRView: View {
         }.resume()
     }
 
-    // Marcar asistencia rápida para un solo alumno, enviando la fecha seleccionada
     func marcarAsistenciaRapida(alumno_id: Int, clase_id: Int, fecha: Date) {
         mensaje = ""
         isLoading = true
@@ -457,50 +662,8 @@ struct SignQRView: View {
             }
         }.resume()
     }
-
-    func marcarTareaRevisada(alumno_id: Int, assignment_id: Int) {
-        mensaje = ""
-        isLoading = true
-        guard let url = URL(string: "http://localhost:8000/tareas/revisadas/") else {
-            mensaje = "URL de tareas revisadas incorrecta"
-            isLoading = false
-            return
-        }
-        let body: [String: Any] = [
-            "alumno_id": alumno_id,
-            "assignment_id": assignment_id,
-            "revisado_en_clase": true
-        ]
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
-            mensaje = "Error al preparar datos"
-            isLoading = false
-            return
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.httpBody = jsonData
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                isLoading = false
-                if let error = error { mensaje = "Error: \(error.localizedDescription)"; return }
-                guard let http = response as? HTTPURLResponse else { mensaje = "Sin respuesta"; return }
-                if (200..<300).contains(http.statusCode) {
-                    mensaje = "Tarea marcada como revisada"
-                    alumnoIdEscaneado = nil
-                    alumnoNombre = nil
-                } else {
-                    let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-                    mensaje = "Error (\(http.statusCode)): \(body)"
-                }
-            }
-        }.resume()
-    }
 }
 
-// Small reusable button style used above
 struct ActionButtonStyle: ButtonStyle {
     var background: Color
     func makeBody(configuration: Configuration) -> some View {
