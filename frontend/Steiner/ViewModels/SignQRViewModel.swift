@@ -146,7 +146,7 @@ final class SignQRViewModel: ObservableObject {
             "nota": "Revisada en clase"
         ]
 
-        api.postMultipartNoDecode("/entregas/tarea/\(tarea_id)", fields: fields, fileFieldName: "file", filename: "revision_en_clase.pdf", fileData: pdfData, mimeType: "application/pdf") { [weak self] result in
+        api.postMultipartNoDecode("/entregas/tarea/\(tarea_id)/alumno/\(alumno_id)", fields: fields, fileFieldName: "file", filename: "revision_en_clase.pdf", fileData: pdfData, mimeType: "application/pdf") { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 switch result {
